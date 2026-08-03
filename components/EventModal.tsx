@@ -28,6 +28,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   ];
   const [color, setColor] = useState(event.color || colorOptions[0].value);
 
+  // 日付の代わりに 'undecided' を選べるようにするステート
+  const [rescheduleType, setRescheduleType] = useState<'date' | 'undecided'>('date');
   const [newDate, setNewDate] = useState(event.date);
 
   const timeOptions: string[] = [];
@@ -67,8 +69,49 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const handleReschedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from('events').update({ date: newDate }).eq('id', event.id);
-    if (!error) { onUpdate(); onClose(); }
+
+    if (rescheduleType === 'undecided') {
+      // 1. 「未定」の場合：元のタイトルの先頭に「[日延べ] 」を付与し、日付を変更せずそのままにする
+      const updatedTitle = event.title.startsWith('[日延べ]') 
+        ? event.title 
+        : `[日延べ] ${event.title}`;
+
+      const { error } = await supabase.from('events').update({
+        title: updatedTitle,
+      }).eq('id', event.id);
+
+      if (!error) { onUpdate(); onClose(); }
+    } else {
+      // 2. 日程が決まっている場合：
+      // ① 元のカードを半透明（クラス等で制御するためタイトル等にフラグや「[日延べ]」を付与）にし、
+      // ② 選択した日付に新しいカードを新規追加する
+
+      const postponedTitle = event.title.startsWith('[日延べ]') 
+        ? event.title 
+        : `[日延べ] ${event.title}`;
+
+      // A. 元のカードを更新（半透明化の目印としてタイトル変更、またはDBにカラムがあればそれを利用）
+      const { error: updateError } = await supabase.from('events').update({
+        title: postponedTitle,
+        // ※もしデータベースに is_postponed などのカラムがあればここで true に更新できます
+      }).eq('id', event.id);
+
+      if (updateError) return;
+
+      // B. 新しい日付に新規カードを作成
+      const { error: insertError } = await supabase.from('events').insert([{
+        title: event.title.replace(/^\[日延べ\]\s*/, ''), // 新しい方は「日延べ」を取った本来のタイトルにする場合
+        date: newDate,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        time: event.time,
+        address: event.address,
+        color: event.color,
+        status: 'active',
+      }]);
+
+      if (!insertError) { onUpdate(); onClose(); }
+    }
   };
 
   return (
@@ -147,7 +190,45 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </form>
           ) : (
             <form onSubmit={handleReschedule} className="space-y-4">
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1">新しい期日</label><input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} required className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" /></div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-2">日延べ先の選択</label>
+                <div className="flex space-x-4 mb-3">
+                  <label className="flex items-center text-sm cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="rescheduleType" 
+                      checked={rescheduleType === 'date'} 
+                      onChange={() => setRescheduleType('date')} 
+                      className="mr-1.5"
+                    />
+                    日付を指定する
+                  </label>
+                  <label className="flex items-center text-sm cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="rescheduleType" 
+                      checked={rescheduleType === 'undecided'} 
+                      onChange={() => setRescheduleType('undecided')} 
+                      className="mr-1.5"
+                    />
+                    未定にする
+                  </label>
+                </div>
+
+                {rescheduleType === 'date' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">新しい期日</label>
+                    <input 
+                      type="date" 
+                      value={newDate} 
+                      onChange={(e) => setNewDate(e.target.value)} 
+                      required 
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" 
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col space-y-2 pt-2">
                 <button type="submit" className="w-full px-4 py-2 bg-blue-600 text-white rounded-md text-sm">日延べを確定する</button>
                 <button type="button" onClick={() => setIsRescheduling(false)} className="w-full px-4 py-2 text-sm text-gray-500">キャンセル</button>
