@@ -31,13 +31,13 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
-      <div className="grid grid-cols-7 border-b border-gray-200 text-center py-2 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
+      <div className="grid grid-cols-7 border-b border-gray-200 text-center py-1.5 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
         {weekDayNames.map((name, index) => <div key={index}>{name}</div>)}
       </div>
-      {/* カレンダー全体で縦スクロールができるようにし、各マスの高さを内容に合わせて可変にします */}
-      <div className="grid grid-cols-7 flex-1 auto-rows-fr divide-x divide-y divide-gray-200 overflow-y-auto">
+      {/* 全体の高さを均等に割り振り、1画面に収める */}
+      <div className="grid grid-cols-7 grid-rows-6 flex-1 divide-x divide-y divide-gray-200 h-full overflow-hidden">
         {days.map((date, index) => {
-          if (!date) return <div key={index} className="bg-gray-50/50 min-h-[100px]" />;
+          if (!date) return <div key={index} className="bg-gray-50/50" />;
 
           const dateStr = date.toISOString().split('T')[0];
           const dayEvents = events.filter((ev) => ev.date === dateStr);
@@ -47,17 +47,17 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
             <div 
               key={index} 
               onClick={() => onCellClick(dateStr, '09:00')} 
-              className="min-h-[120px] p-1.5 hover:bg-gray-50 cursor-pointer transition flex flex-col"
+              className="p-1 hover:bg-gray-50 cursor-pointer transition flex flex-col overflow-hidden"
             >
-              <div className="text-right mb-1">
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full inline-block ${isToday ? 'bg-blue-600 text-white font-bold' : 'text-gray-700'}`}>
+              <div className="text-right mb-0.5">
+                <span className={`text-[11px] font-medium px-1.5 py-0.2 rounded-full inline-block ${isToday ? 'bg-blue-600 text-white font-bold' : 'text-gray-700'}`}>
                   {date.getDate()}
                 </span>
               </div>
-              {/* セル内の予定を縦に並べてすべて表示（折り返し・スクロールなし） */}
-              <div className="flex-1 space-y-1">
+              {/* カードの高さを抑えて縦に並べ、セル内に収める */}
+              <div className="flex-1 space-y-0.5 overflow-y-auto">
                 {dayEvents.map((event) => (
-                  <div key={event.id} className="w-full">
+                  <div key={event.id} className="text-[10px] leading-tight">
                     <EventCard event={event} onClick={() => onSelectEvent(event)} />
                   </div>
                 ))}
