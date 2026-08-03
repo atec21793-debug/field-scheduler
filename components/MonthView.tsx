@@ -34,7 +34,6 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
       <div className="grid grid-cols-7 border-b border-gray-200 text-center py-1.5 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
         {weekDayNames.map((name, index) => <div key={index}>{name}</div>)}
       </div>
-      {/* 全体の高さを均等に割り振り、1画面に収める */}
       <div className="grid grid-cols-7 grid-rows-6 flex-1 divide-x divide-y divide-gray-200 h-full overflow-hidden">
         {days.map((date, index) => {
           if (!date) return <div key={index} className="bg-gray-50/50" />;
@@ -54,10 +53,10 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
                   {date.getDate()}
                 </span>
               </div>
-              {/* カードの高さを抑えて縦に並べ、セル内に収める */}
+              {/* 各予定カードを1行（truncate）で表示し、縦に並べる */}
               <div className="flex-1 space-y-0.5 overflow-y-auto">
                 {dayEvents.map((event) => (
-                  <div key={event.id} className="text-[10px] leading-tight">
+                  <div key={event.id} className="text-[10px] leading-tight truncate">
                     <EventCard event={event} onClick={() => onSelectEvent(event)} />
                   </div>
                 ))}
