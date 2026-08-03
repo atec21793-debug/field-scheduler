@@ -38,8 +38,8 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   const formatDateStr = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const day = String(date.getDate() + 1).padStart(2, '0'); // 修正：正しく当日の日付にするためそのまま
+    return `${year}-${month}-${String(date.getDate()).padStart(2, '0')}`;
   };
 
   const timeToMinutes = (timeStr?: string) => {
@@ -53,8 +53,8 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
 
   return (
     <div className="flex flex-col h-full bg-white select-none overflow-x-auto">
-      {/* ヘッダー部分：本体と同じ flex 構成にして列のズレを解消 */}
-      <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
+      {/* ヘッダー部分：右側にスクロールバー分のスペース（pr-[scrollbar幅]相当）を確保 */}
+      <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 pr-[17px]">
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
         <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
           {weekDays.map((date, index) => {
