@@ -53,14 +53,14 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
 
   return (
     <div className="flex flex-col h-full bg-white select-none overflow-x-auto">
-      {/* ヘッダー部分：幅を w-8 に狭く変更 */}
+      {/* ヘッダー部分：本体と同じ flex 構成にして列のズレを解消 */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
-        <div className="grid grid-cols-7 flex-1">
+        <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
           {weekDays.map((date, index) => {
             const isToday = new Date().toDateString() === date.toDateString();
             return (
-              <div key={index} className="flex flex-col items-center py-2 border-r border-gray-200 last:border-r-0">
+              <div key={index} className="flex flex-col items-center py-2">
                 <span>{weekDayNames[index]}</span>
                 <span className={`mt-1 text-sm h-7 w-7 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white font-bold' : 'text-gray-800'}`}>
                   {date.getDate()}
@@ -72,7 +72,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       </div>
 
       <div className="flex-1 overflow-y-auto relative flex">
-        {/* 時間数字カラム：幅を w-8 に狭く、右パディングも調整 */}
+        {/* 時間数字カラム */}
         <div className="w-8 flex-shrink-0 border-r border-gray-200 bg-gray-50/30">
           {hours.map((hour) => (
             <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="text-right pr-1 pt-1 text-xs text-gray-500 font-medium border-b border-gray-100">
