@@ -53,10 +53,10 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
                   {date.getDate()}
                 </span>
               </div>
-              {/* 各カードを横幅に収まるよう強制的に1行で切り捨て（truncate） */}
+              {/* 各カードをブロック要素として強制的に1行に収め、はみ出た分を省略する */}
               <div className="flex-1 space-y-0.5 overflow-hidden">
                 {dayEvents.map((event) => (
-                  <div key={event.id} className="text-[10px] leading-tight truncate w-full">
+                  <div key={event.id} className="w-full overflow-hidden whitespace-nowrap text-ellipsis text-[10px] leading-tight">
                     <EventCard event={event} onClick={() => onSelectEvent(event)} />
                   </div>
                 ))}
