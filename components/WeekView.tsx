@@ -53,9 +53,9 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
 
   return (
     <div className="flex flex-col h-full bg-white select-none overflow-x-auto">
-      {/* ヘッダー部分 */}
+      {/* ヘッダー部分：「時間」の文字を削除して空白を詰める */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
-        <div className="w-12 flex-shrink-0 text-center py-2 border-r border-gray-200">時間</div>
+        <div className="w-12 flex-shrink-0 border-r border-gray-200" />
         <div className="grid grid-cols-7 flex-1">
           {weekDays.map((date, index) => {
             const isToday = new Date().toDateString() === date.toDateString();
@@ -71,7 +71,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         </div>
       </div>
 
-      {/* 本体部分（時間を「9」などの数字で表示） */}
       <div className="flex-1 overflow-y-auto relative flex">
         <div className="w-12 flex-shrink-0 border-r border-gray-200 bg-gray-50/30">
           {hours.map((hour) => (
