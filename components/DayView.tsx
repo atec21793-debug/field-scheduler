@@ -78,15 +78,7 @@ export default function DayView({ currentDate, events, onSelectEvent, onCellClic
         {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月 {currentDate.getDate()}日
       </div>
       <div className="flex-1 overflow-y-auto flex relative">
-        {/* 時間列の幅を w-12 に狭く変更 */}
-        <div className="w-12 flex-shrink-0 border-r border-gray-200 bg-gray-50/30">
-          {hours.map((hour) => (
-            <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="text-right pr-2 pt-1 text-[11px] text-gray-400 border-b border-gray-100">
-              {hour.toString().padStart(2, '0')}:00
-            </div>
-          ))}
-        </div>
-
+        {/* 時間軸カラムを削除し、スケジュールエリアを全幅表示 */}
         <div className="flex-1 relative" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
           {hours.map((hour) => {
             const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
