@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { EventItem } from '@/app/page';
-import { X, MapPin, Check, Edit2, Calendar, Clock } from 'lucide-react';
+import { X, MapPin, Check, Edit2, Calendar, Clock, Trash2 } from 'lucide-react';
 
 interface EventModalProps {
   event: EventItem;
@@ -71,7 +71,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
 
     if (rescheduleType === 'undecided') {
-      // 1. 「未定」の場合：元のタイトルの先頭に「[日延べ] 」を付与し、日付を変更せずそのままにする
+      // 1. 「未定」にする場合：元のタイトルの先頭に「[日延べ]」を付与し、日付や場所はそのままにする
       const updatedTitle = event.title.startsWith('[日延べ]') 
         ? event.title 
         : `[日延べ] ${event.title}`;
@@ -83,24 +83,24 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       if (!error) { onUpdate(); onClose(); }
     } else {
       // 2. 日程が決まっている場合：
-      // ① 元のカードを半透明（クラス等で制御するためタイトル等にフラグや「[日延べ]」を付与）にし、
+      // ① 元のカードを半透明にするためタイトルに「[日延べ]」を付与
       // ② 選択した日付に新しいカードを新規追加する
 
       const postponedTitle = event.title.startsWith('[日延べ]') 
         ? event.title 
         : `[日延べ] ${event.title}`;
 
-      // A. 元のカードを更新（半透明化の目印としてタイトル変更、またはDBにカラムがあればそれを利用）
+      // A. 元のカードを更新（半透明の目印としてタイトルに [日延べ] を付与）
       const { error: updateError } = await supabase.from('events').update({
         title: postponedTitle,
-        // ※もしデータベースに is_postponed などのカラムがあればここで true に更新できます
       }).eq('id', event.id);
 
       if (updateError) return;
 
-      // B. 新しい日付に新規カードを作成
+      // B. 新しい日付に新規カードを作成（「日延べ」の文字を取り除いた本来のタイトルを引き継ぐ）
+      const originalTitle = event.title.replace(/^\[日延べ\]\s*/, '');
       const { error: insertError } = await supabase.from('events').insert([{
-        title: event.title.replace(/^\[日延べ\]\s*/, ''), // 新しい方は「日延べ」を取った本来のタイトルにする場合
+        title: originalTitle,
         date: newDate,
         start_time: event.start_time,
         end_time: event.end_time,
@@ -111,6 +111,17 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       }]);
 
       if (!insertError) { onUpdate(); onClose(); }
+    }
+  };
+
+  // 予定削除のハンドラー
+  const handleDelete = async () => {
+    if (confirm('この予定を本当に削除しますか？')) {
+      const { error } = await supabase.from('events').delete().eq('id', event.id);
+      if (!error) {
+        onUpdate();
+        onClose();
+      }
     }
   };
 
@@ -148,6 +159,17 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </button>
                 <button onClick={() => setIsEditing(true)} className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"><Edit2 size={16} className="mr-1.5" />編集</button>
                 <button onClick={() => setIsRescheduling(true)} className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"><Calendar size={16} className="mr-1.5" />日延べ</button>
+              </div>
+
+              {/* 削除ボタン */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="w-full flex items-center justify-center py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition"
+                >
+                  <Trash2 size={16} className="mr-1.5" /> 予定を削除する
+                </button>
               </div>
             </div>
           ) : isEditing ? (
