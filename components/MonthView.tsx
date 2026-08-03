@@ -31,9 +31,15 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
-      <div className="grid grid-cols-7 border-b border-gray-200 text-center py-1.5 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
-        {weekDayNames.map((name, index) => <div key={index}>{name}</div>)}
+      {/* 本体と同じ grid-cols-7 と divide-x を指定して、縦のラインを完全に一致させる */}
+      <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 divide-x divide-gray-200">
+        {weekDayNames.map((name, index) => (
+          <div key={index} className="text-center py-1.5">
+            {name}
+          </div>
+        ))}
       </div>
+
       <div className="grid grid-cols-7 grid-rows-6 flex-1 divide-x divide-y divide-gray-200 h-full overflow-hidden">
         {days.map((date, index) => {
           if (!date) return <div key={index} className="bg-gray-50/50" />;
@@ -53,14 +59,9 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
                   {date.getDate()}
                 </span>
               </div>
-              
-              {/* 各カードを完全に1行・固定幅で収めるためのラッパー */}
               <div className="flex-1 space-y-0.5 overflow-hidden">
                 {dayEvents.map((event) => (
-                  <div 
-                    key={event.id} 
-                    className="w-full max-w-full overflow-hidden whitespace-nowrap text-ellipsis text-[10px] leading-tight block"
-                  >
+                  <div key={event.id} className="w-full overflow-hidden whitespace-nowrap text-ellipsis text-[10px] leading-tight block">
                     <div className="inline-block w-full overflow-hidden whitespace-nowrap text-ellipsis">
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
                     </div>
