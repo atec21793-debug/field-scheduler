@@ -55,6 +55,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     <div className="flex flex-col h-full bg-white select-none overflow-x-auto">
       {/* ヘッダー部分 */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
+        <div className="w-12 flex-shrink-0 text-center py-2 border-r border-gray-200">時間</div>
         <div className="grid grid-cols-7 flex-1">
           {weekDays.map((date, index) => {
             const isToday = new Date().toDateString() === date.toDateString();
@@ -70,8 +71,16 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         </div>
       </div>
 
-      {/* 本体部分（時間軸カラムを削除） */}
+      {/* 本体部分（時間を「9」などの数字で表示） */}
       <div className="flex-1 overflow-y-auto relative flex">
+        <div className="w-12 flex-shrink-0 border-r border-gray-200 bg-gray-50/30">
+          {hours.map((hour) => (
+            <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="text-right pr-2 pt-1 text-xs text-gray-500 font-medium border-b border-gray-100">
+              {hour}
+            </div>
+          ))}
+        </div>
+
         <div className="grid grid-cols-7 flex-1 relative divide-x divide-gray-200">
           {weekDays.map((date, dayIndex) => {
             const dateStr = formatDateStr(date);
@@ -101,34 +110,21 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
 
             for (const item of parsedEvents) {
               let colIndex = 0;
+              let placed = false;
 
               for (let i = 0; i < columns.length; i++) {
                 const lastEventInCol = columns[i][columns[i].length - 1];
                 if (lastEventInCol.endMin <= item.startMin) {
                   columns[i].push(item);
                   colIndex = i;
+                  placed = true;
                   break;
                 }
               }
 
-              if (colIndex === 0 && columns.length === 0) {
+              if (!placed) {
+                colIndex = columns.length;
                 columns.push([item]);
-              } else if (colIndex === 0 && columns.length > 0 && columns[0][columns[0].length - 1].endMin > item.startMin) {
-                // 新しい列を追加する必要がある場合
-                let placed = false;
-                for (let i = 0; i < columns.length; i++) {
-                  const last = columns[i][columns[i].length - 1];
-                  if (last.endMin <= item.startMin) {
-                    columns[i].push(item);
-                    colIndex = i;
-                    placed = true;
-                    break;
-                  }
-                }
-                if (!placed) {
-                  colIndex = columns.length;
-                  columns.push([item]);
-                }
               }
 
               tempPositionedEvents.push({
