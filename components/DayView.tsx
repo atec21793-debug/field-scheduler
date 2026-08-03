@@ -78,10 +78,10 @@ export default function DayView({ currentDate, events, onSelectEvent, onCellClic
         {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月 {currentDate.getDate()}日
       </div>
       <div className="flex-1 overflow-y-auto flex relative">
-        {/* 左側の時間数字カラム（空白をなくし、数字を直接表示） */}
-        <div className="w-12 flex-shrink-0 border-r border-gray-200 bg-gray-50/30">
+        {/* 時間数字カラムの幅を w-8 に狭く変更 */}
+        <div className="w-8 flex-shrink-0 border-r border-gray-200 bg-gray-50/30">
           {hours.map((hour) => (
-            <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="text-right pr-2 pt-1 text-xs text-gray-500 font-medium border-b border-gray-100">
+            <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }} className="text-right pr-1 pt-1 text-xs text-gray-500 font-medium border-b border-gray-100">
               {hour}
             </div>
           ))}
