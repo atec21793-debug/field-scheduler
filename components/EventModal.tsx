@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3 } from 'lucide-react';
 
 interface EventModalProps {
   event: EventItem;
@@ -12,6 +12,14 @@ interface EventModalProps {
 }
 
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
+  // 編集モードの状態
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(event.title || '');
+  const [date, setDate] = useState(event.date || '');
+  const [startTime, setStartTime] = useState(event.start_time || '');
+  const [endTime, setEndTime] = useState(event.end_time || '');
+  const [address, setAddress] = useState(event.address || '');
+
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -51,6 +59,31 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
+  // 予定自体の基本情報（タイトル、日時、場所など）の保存
+  const handleSaveBasicInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    const timeString = startTime && endTime ? `${startTime} - ${endTime}` : '';
+    const { error } = await supabase
+      .from('events')
+      .update({
+        title,
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        time: timeString,
+        address,
+      })
+      .eq('id', event.id);
+
+    setIsSaving(false);
+    if (!error) {
+      setIsEditing(false);
+      onUpdate();
+    }
+  };
+
   // 日延べ登録の実行
   const handleConfirmPostpone = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +94,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .trim();
 
     if (postponeType === 'undecided') {
-      // 未定の場合：現在の予定タイトルを「日延べ [元のタイトル]」に更新（半透明にしない）
       const newTitle = `日延べ ${cleanTitle}`.trim();
       const { error } = await supabase
         .from('events')
@@ -73,8 +105,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         onClose();
       }
     } else {
-      // 日程を決めて新規作成する場合：
-      // 1. 新しい日付でカードを新規作成（先頭に🔁）
       let durationMinutes = 60;
       if (event.start_time && event.end_time) {
         const startMin = timeToMinutes(event.start_time);
@@ -110,7 +140,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      // 2. 元のカードのタイトルを「日延べ [元のタイトル]」にしつつ、statusを「completed」にして半透明にする
       const originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       const { error: updateError } = await supabase
         .from('events')
@@ -156,18 +185,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // メモや日報の保存処理
+  // メモや日報の自動保存（フォーカスアウト時）
   const handleSaveNotes = async () => {
-    setIsSaving(true);
-    const { error } = await supabase
+    await supabase
       .from('events')
       .update({ memo, report })
       .eq('id', event.id);
-
-    setIsSaving(false);
-    if (!error) {
-      onUpdate();
-    }
+    onUpdate();
   };
 
   const isPostponedUndecided = (event.title || '').includes('日延べ');
@@ -180,37 +204,125 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-lg font-bold text-gray-800 truncate">{event.title}</h2>
-          <button 
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition"
-          >
-            <X size={20} />
-          </button>
+          <h2 className="text-lg font-bold text-gray-800 truncate">
+            {isEditing ? '予定の編集' : event.title}
+          </h2>
+          <div className="flex items-center space-x-1">
+            {!isEditing && (
+              <button 
+                onClick={() => setIsEditing(true)}
+                className="p-1.5 text-blue-500 hover:text-blue-700 rounded-full hover:bg-blue-50 transition"
+                title="編集"
+              >
+                <Edit3 size={18} />
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* コンテンツボディ（スクロール可能） */}
+        {/* コンテンツボディ */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* 日時と場所 */}
-          <div className="space-y-2 text-sm text-gray-600">
-            <div className="flex items-center space-x-2">
-              <Calendar size={16} className="text-blue-500 flex-shrink-0" />
-              <span>{event.date} {event.start_time && event.end_time ? `(${event.start_time} 〜 ${event.end_time})` : ''}</span>
-            </div>
-            {event.address && (
-              <div className="flex items-center space-x-2">
-                <MapPin size={16} className="text-red-500 flex-shrink-0" />
-                <a 
-                  href={`https://maps.google.com/?q=${encodeURIComponent(event.address)}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline truncate"
-                >
-                  {event.address}
-                </a>
+          {/* 編集モード時のフォーム */}
+          {isEditing ? (
+            <form onSubmit={handleSaveBasicInfo} className="bg-blue-50/50 p-4 rounded-lg border border-blue-200 space-y-3">
+              <h3 className="text-xs font-bold text-blue-900">予定情報の編集</h3>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">タイトル</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                  required
+                />
               </div>
-            )}
-          </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">開始時間</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">終了時間</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">住所</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                    placeholder="場所・住所"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-600 bg-white hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 font-semibold"
+                >
+                  保存
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* 通常表示時の日時と場所 */
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center space-x-2">
+                <Calendar size={16} className="text-blue-500 flex-shrink-0" />
+                <span>{event.date} {event.start_time && event.end_time ? `(${event.start_time} 〜 ${event.end_time})` : ''}</span>
+              </div>
+              {event.address && (
+                <div className="flex items-center space-x-2">
+                  <MapPin size={16} className="text-red-500 flex-shrink-0" />
+                  <a 
+                    href={`https://maps.google.com/?q=${encodeURIComponent(event.address)}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline truncate"
+                  >
+                    {event.address}
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ステータスと各種アクションボタン */}
           <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
@@ -263,7 +375,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'undecided'}
                     onChange={() => setPostponeType('undecided')}
                   />
-                  <span>未定</span>
+                  <span>未定（日延べと表示・透過しない）</span>
                 </label>
                 <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
@@ -272,7 +384,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'date'}
                     onChange={() => setPostponeType('date')}
                   />
-                  <span>日程を決めて新規作成</span>
+                  <span>日程を決めて新規作成（元は半透明＋日延べ）</span>
                 </label>
               </div>
 
