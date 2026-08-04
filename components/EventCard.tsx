@@ -30,10 +30,16 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
         shouldDim ? 'opacity-50' : 'opacity-100'
       }`}
     >
-      <div>
-        <div className="leading-tight break-words pr-4">
+      <div className="overflow-hidden">
+        <div className="leading-tight break-words pr-4 font-medium">
           {event.title}
         </div>
+        {/* 住所が存在する場合にカード内に表示する（DBのカラム名に合わせて address を使用） */}
+        {event.address && (
+          <div className="text-[10px] opacity-90 truncate mt-0.5">
+            📍 {event.address}
+          </div>
+        )}
       </div>
 
       {onDelete && (
