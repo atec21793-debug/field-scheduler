@@ -11,6 +11,15 @@ interface EventModalProps {
   onUpdate: () => void;
 }
 
+const COLOR_OPTIONS = [
+  { label: 'ブルー', value: 'bg-blue-600' },
+  { label: 'レッド', value: 'bg-red-600' },
+  { label: 'グリーン', value: 'bg-green-600' },
+  { label: 'オレンジ', value: 'bg-orange-600' },
+  { label: 'パープル', value: 'bg-purple-600' },
+  { label: 'グレー', value: 'bg-gray-600' },
+];
+
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   // 編集モードの状態
   const [isEditing, setIsEditing] = useState(false);
@@ -19,6 +28,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [startTime, setStartTime] = useState(event.start_time || '');
   const [endTime, setEndTime] = useState(event.end_time || '');
   const [address, setAddress] = useState(event.address || '');
+  const [selectedColor, setSelectedColor] = useState(event.color || 'bg-blue-600');
 
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
@@ -59,7 +69,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // 予定自体の基本情報（タイトル、日時、場所など）の保存
+  // 予定自体の基本情報（タイトル、日時、場所、色など）の保存
   const handleSaveBasicInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -74,6 +84,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         end_time: endTime,
         time: timeString,
         address,
+        color: selectedColor,
       })
       .eq('id', event.id);
 
@@ -284,6 +295,25 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   />
                 </div>
               </div>
+
+              {/* カラー選択 */}
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">カードの色</label>
+                <div className="flex space-x-2">
+                  {COLOR_OPTIONS.map((colorObj) => (
+                    <button
+                      key={colorObj.value}
+                      type="button"
+                      onClick={() => setSelectedColor(colorObj.value)}
+                      className={`w-6 h-6 rounded-full ${colorObj.value} transition transform ${
+                        selectedColor === colorObj.value ? 'ring-2 ring-offset-2 ring-blue-600 scale-110' : 'opacity-70 hover:opacity-100'
+                      }`}
+                      title={colorObj.label}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-2 pt-1">
                 <button
                   type="button"
