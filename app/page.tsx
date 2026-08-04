@@ -21,12 +21,15 @@ export type EventItem = {
   start_time: string | null;
   end_time: string | null;
   color: string | null;
+  memo?: string | null;    // 追加
+  report?: string | null;  // 追加
 };
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('week');
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>(''); // 検索キーワード用ステート
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -63,6 +66,16 @@ export default function Home() {
     setIsCreateModalOpen(true);
   };
 
+  // 検索キーワード（タイトル・メンバー・住所）でイベントをフィルタリング
+  const filteredEvents = events.filter((ev) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const title = (ev.title || '').toLowerCase();
+    const member = (ev.member || '').toLowerCase();
+    const address = (ev.address || '').toLowerCase();
+    return title.includes(query) || member.includes(query) || address.includes(query);
+  });
+
   return (
     <main className="flex flex-col h-screen bg-white">
       <CalendarHeader
@@ -70,15 +83,17 @@ export default function Home() {
         viewMode={viewMode}
         setViewMode={setViewMode}
         onNavigate={handleNavigate}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
       <div className="flex-1 overflow-auto">
         {viewMode === 'month' && (
-          <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
+          <MonthView currentDate={currentDate} events={filteredEvents} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
         )}
         {viewMode === 'week' && (
           <WeekView 
             currentDate={currentDate} 
-            events={events} 
+            events={filteredEvents} 
             onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
             onCellClick={handleCellClick} 
             onUpdate={fetchEvents}
@@ -86,7 +101,7 @@ export default function Home() {
           />
         )}
         {viewMode === 'day' && (
-          <DayView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
+          <DayView currentDate={currentDate} events={filteredEvents} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
         )}
       </div>
 

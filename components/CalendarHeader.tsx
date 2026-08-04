@@ -1,11 +1,13 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 
 interface CalendarHeaderProps {
   currentDate: Date;
   viewMode: 'month' | 'week' | 'day';
   setViewMode: (mode: 'month' | 'week' | 'day') => void;
   onNavigate: (direction: 'prev' | 'today' | 'next') => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
 }
 
 export default function CalendarHeader({
@@ -13,12 +15,14 @@ export default function CalendarHeader({
   viewMode,
   setViewMode,
   onNavigate,
+  searchQuery,
+  setSearchQuery,
 }: CalendarHeaderProps) {
   const formattedYearMonth = `${currentDate.getFullYear()}年 ${currentDate.getMonth() + 1}月`;
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3 bg-white">
-      <div className="flex items-center space-x-4">
+    <header className="flex flex-col sm:flex-row items-center justify-between border-b border-gray-200 px-4 py-3 bg-white gap-3">
+      <div className="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-start">
         <h1 className="text-xl font-semibold text-gray-800 min-w-[120px]">
           {formattedYearMonth}
         </h1>
@@ -35,25 +39,48 @@ export default function CalendarHeader({
         </div>
       </div>
 
-      <div className="flex bg-gray-100 p-1 rounded-lg">
-        <button
-          onClick={() => setViewMode('day')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'day' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}
-        >
-          日
-        </button>
-        <button
-          onClick={() => setViewMode('week')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}
-        >
-          週
-        </button>
-        <button
-          onClick={() => setViewMode('month')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}
-        >
-          月
-        </button>
+      <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+        {/* 検索入力欄 */}
+        <div className="relative flex-1 sm:w-64">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="予定を検索（例: 新宿、工期など）"
+            className="w-full pl-9 pr-8 py-1.5 text-sm bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-gray-800"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* 表示切替タブ */}
+        <div className="flex bg-gray-100 p-1 rounded-lg flex-shrink-0">
+          <button
+            onClick={() => setViewMode('day')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'day' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}
+          >
+            日
+          </button>
+          <button
+            onClick={() => setViewMode('week')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}
+          >
+            週
+          </button>
+          <button
+            onClick={() => setViewMode('month')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}
+          >
+            月
+          </button>
+        </div>
       </div>
     </header>
   );
