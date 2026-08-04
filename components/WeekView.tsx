@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { EventItem } from '@/app/page';
 import EventCard from './EventCard';
 import { supabase } from '@/lib/supabase';
@@ -9,6 +9,7 @@ interface WeekViewProps {
   onSelectEvent: (event: EventItem) => void;
   onCellClick: (dateStr: string, timeStr?: string) => void;
   onUpdate?: () => void | Promise<void>;
+  onNavigate?: (direction: 'next' | 'prev') => void; // 週切り替え用のコールバック
 }
 
 interface ParsedEvent {
@@ -22,7 +23,7 @@ interface PositionedEvent extends ParsedEvent {
   totalCols: number;
 }
 
-export default function WeekView({ currentDate, events, onSelectEvent, onCellClick, onUpdate }: WeekViewProps) {
+export default function WeekView({ currentDate, events, onSelectEvent, onCellClick, onUpdate, onNavigate }: WeekViewProps) {
   const startOfWeek = new Date(currentDate);
   const day = startOfWeek.getDay();
   startOfWeek.setDate(startOfWeek.getDate() - day);
@@ -41,6 +42,39 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   const [selectedDateForHoliday, setSelectedDateForHoliday] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string>('天野');
   const members = ['天野', '佐々木', '山岡'];
+
+  // スワイプ検知用の座標保持用ref
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const diffX = touchEndX - touchStartX.current;
+    const diffY = touchEndY - touchStartY.current;
+
+    // 横方向のスワイプが縦方向より大きく、かつ一定以上動いた場合のみ週切替
+    const threshold = 50;
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+      if (onNavigate) {
+        if (diffX > 0) {
+          onNavigate('prev'); // 右スワイプ -> 先週
+        } else {
+          onNavigate('next'); // 左スワイプ -> 翌週
+        }
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   const formatDateStr = (date: Date) => {
     const year = date.getFullYear();
@@ -144,7 +178,11 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   };
 
   return (
-    <div className="flex flex-col h-full bg-white select-none overflow-x-auto relative">
+    <div 
+      className="flex flex-col h-full bg-white select-none overflow-x-auto relative touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* ヘッダー部分（日付の下に #388ddd の休みカードを表示） */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 pr-[17px]">
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
@@ -226,7 +264,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
               };
             });
 
-            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
+            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - b.startMin));
 
             const tempPositionedEvents: Omit<PositionedEvent, 'totalCols'>[] = [];
             const columns: ParsedEvent[][] = [];
