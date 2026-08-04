@@ -4,7 +4,7 @@ import { EventItem } from '@/app/page';
 interface EventCardProps {
   event: EventItem;
   onClick: () => void;
-  onDelete?: () => void; // 削除用のコールバック（任意）
+  onDelete?: () => void;
 }
 
 export default function EventCard({ event, onClick, onDelete }: EventCardProps) {
@@ -14,12 +14,14 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
   // 2. タイトルを取得
   const title = event.title || '';
 
-  // 3. 「未定」や「日延未定」などの文字が含まれているか判定
-  const isUndecided = title.includes('未定');
+  // 3. タイトルの内容でフラグを判定
+  const isUndecided = title.includes('日延未定'); // 未定のもの
+  const isPostponed = title.includes('日延べ');  // 日程が決まって日延べされたもの
 
-  // 4. 完了している かつ 「未定」ではない場合のみ半透明（opacity-50）にする
-  // （＝日程が決まった日延べや通常の予定は半透明になり、未定のものは半透明にならない）
-  const shouldDim = isCompleted && !isUndecided;
+  // 4. 半透明（opacity-50）にする条件：
+  // ・「日延べ」の文字が含まれている（日程が決まった側）
+  // ・ または、完了していて、かつ「日延未定」ではないもの
+  const shouldDim = isPostponed || (isCompleted && !isUndecided);
 
   return (
     <div
@@ -40,11 +42,10 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
         )}
       </div>
 
-      {/* 削除ボタン（ホバー時または常時表示） */}
       {onDelete && (
         <button
           onClick={(e) => {
-            e.stopPropagation(); // カード自体のクリックイベント（編集モーダルなど）が発火しないようにする
+            e.stopPropagation();
             if (confirm('この予定を削除しますか？')) {
               onDelete();
             }
