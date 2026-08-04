@@ -4,19 +4,25 @@ import { EventItem } from '@/app/page';
 interface EventCardProps {
   event: EventItem;
   onClick: () => void;
-  onDelete?: () => void; // 削除用のコールバック（任意）
+  onDelete?: () => void;
 }
 
 export default function EventCard({ event, onClick, onDelete }: EventCardProps) {
-  // タイトルに「[日延べ]」が含まれているか判定
-  const isPostponed = event.title && event.title.includes('[日延べ]');
+  const isCompleted = event.status === 'completed' || (event as any).completed;
+  
+  const title = event.title || '';
+  // 「未定」という文字が含まれている場合は、完了していても半透明にしない
+  const isUndecided = title.includes('未定');
+
+  // 完了していて、かつ「未定」が含まれていない場合のみ半透明にする
+  const shouldDim = isCompleted && !isUndecided;
 
   return (
     <div
       onClick={onClick}
       style={{ backgroundColor: event.color || '#4b5563' }}
-      className={`w-full h-full text-white text-xs p-1 rounded shadow-sm cursor-pointer hover:opacity-90 flex flex-col justify-between overflow-hidden box-border whitespace-normal break-words relative group ${
-        isPostponed ? 'opacity-50' : ''
+      className={`w-full h-full text-white text-xs p-1 rounded shadow-sm cursor-pointer hover:opacity-90 flex flex-col justify-between overflow-hidden box-border whitespace-normal break-words relative group transition-opacity ${
+        shouldDim ? 'opacity-50' : 'opacity-100'
       }`}
     >
       <div>
@@ -30,11 +36,10 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
         )}
       </div>
 
-      {/* 削除ボタン（ホバー時または常時表示） */}
       {onDelete && (
         <button
           onClick={(e) => {
-            e.stopPropagation(); // カード自体のクリックイベント（編集モーダルなど）が発火しないようにする
+            e.stopPropagation();
             if (confirm('この予定を削除しますか？')) {
               onDelete();
             }
