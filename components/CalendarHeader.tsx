@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
@@ -21,8 +21,12 @@ export default function CalendarHeader({
   onUpdate,
 }: CalendarHeaderProps) {
   const formattedYearMonth = `${currentDate.getFullYear()}年 ${currentDate.getMonth() + 1}月`;
+  const [selectedDateForHoliday, setSelectedDateForHoliday] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<string>('天野');
 
-  // 週表示の場合にその週の7日間を計算する
+  const members = ['天野', '佐々木', '山岡'];
+
+  // 週表示の場合の7日間を計算
   const getWeekDays = () => {
     const startOfWeek = new Date(currentDate);
     const day = startOfWeek.getDay();
@@ -44,18 +48,23 @@ export default function CalendarHeader({
 
   const weekDays = viewMode === 'week' ? getWeekDays() : [];
 
-  // 日付セルをクリックしたとき（休みの追加）
-  const handleHeaderCellClick = async (dateStr: string) => {
-    const name = prompt('お休みする人の名前を入力してください:');
-    if (!name || !name.trim()) return;
+  // 日付セルをクリックしたとき（ドロップダウン用モーダルを開く）
+  const handleHeaderCellClick = (dateStr: string) => {
+    setSelectedDateForHoliday(dateStr);
+    setSelectedMember('天野'); // デフォルト
+  };
 
-    const holidayTitle = `${name.trim()} 🎌`;
+  // 休みを確定して保存
+  const handleConfirmHoliday = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDateForHoliday) return;
 
-    // Supabaseに水色カードとして保存（color: '#38bdf8'）
+    const holidayTitle = `${selectedMember} 🎌`;
+
     const { error } = await supabase.from('events').insert([
       {
         title: holidayTitle,
-        date: dateStr,
+        date: selectedDateForHoliday,
         color: '#38bdf8',
         status: 'active',
       },
@@ -64,6 +73,7 @@ export default function CalendarHeader({
     if (!error && onUpdate) {
       onUpdate();
     }
+    setSelectedDateForHoliday(null);
   };
 
   // 水色の休みカードをクリックしたとき（削除）
@@ -119,14 +129,13 @@ export default function CalendarHeader({
         </div>
       </div>
 
-      {/* 週表示の場合に曜日・日付の下に水色の休みカードを表示するエリア */}
+      {/* 週表示の場合の1つのまとまったヘッダーと休みカードエリア */}
       {viewMode === 'week' && (
         <div className="flex border-t border-gray-200 bg-gray-50 text-xs text-gray-600">
           <div className="w-8 flex-shrink-0 border-r border-gray-200" />
           <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
             {weekDays.map((wd, index) => {
               const dayEvents = events.filter((e) => e.date === wd.dateString);
-              // 「🎌」が含まれる、またはカラーが水色（#38bdf8）のものを休みとして抽出
               const holidayEvents = dayEvents.filter((e) => e.title.includes('🎌') || e.color === '#38bdf8');
               const isToday = new Date().toDateString() === new Date(wd.dateString).toDateString();
 
@@ -159,6 +168,44 @@ export default function CalendarHeader({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* メンバー選択用のモーダル（ドロップダウン） */}
+      {selectedDateForHoliday && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs p-5">
+            <h3 className="text-sm font-bold text-gray-800 mb-3">お休み登録 ({selectedDateForHoliday})</h3>
+            <form onSubmit={handleConfirmHoliday} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">メンバー選択</label>
+                <select
+                  value={selectedMember}
+                  onChange={(e) => setSelectedMember(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                >
+                  {members.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex space-x-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDateForHoliday(null)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-xs text-gray-600"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md text-xs"
+                >
+                  追加
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
