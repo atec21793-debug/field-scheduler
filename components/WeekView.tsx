@@ -60,14 +60,13 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const diffX = touchEndX - touchStartX.current;
     const diffY = touchEndY - touchStartY.current;
 
-    // 横方向のスワイプが縦方向より大きく、かつ一定以上動いた場合のみ週切替
     const threshold = 50;
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
       if (onNavigate) {
         if (diffX > 0) {
-          onNavigate('prev'); // 右スワイプ -> 先週
+          onNavigate('prev');
         } else {
-          onNavigate('next'); // 左スワイプ -> 翌週
+          onNavigate('next');
         }
       }
     }
@@ -95,11 +94,12 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   // ドラッグ＆ドロップで予定を移動する処理
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
+    e.stopPropagation();
     const eventIdStr = e.dataTransfer.getData('text/plain');
     if (!eventIdStr) return;
 
     const eventId = Number(eventIdStr);
-    const targetEvent = events.find((ev) => ev.id === eventId);
+    const targetEvent = events.find((ev) => Number(ev.id) === eventId);
     if (!targetEvent) return;
 
     let durationMinutes = 60;
@@ -138,13 +138,12 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     }
   };
 
-  // ヘッダーのセルをクリックしたとき（ドロップダウンモーダルを開く）
+  // ヘッダーのセルをクリックしたとき
   const handleHeaderClick = (dateStr: string) => {
     setSelectedDateForHoliday(dateStr);
     setSelectedMember('天野');
   };
 
-  // お休みを確定して保存（#388ddd で保存）
   const handleConfirmHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDateForHoliday) return;
@@ -166,7 +165,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     setSelectedDateForHoliday(null);
   };
 
-  // 休みカードをクリックしたときの削除処理
   const handleHolidayDelete = async (e: React.MouseEvent, eventId: number) => {
     e.stopPropagation();
     if (confirm('このお休みの予定を削除しますか？')) {
@@ -183,7 +181,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ヘッダー部分（日付の下に #388ddd の休みカードを表示） */}
+      {/* ヘッダー部分 */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 pr-[17px]">
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
         <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
@@ -362,6 +360,11 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   return (
                     <div
                       key={event.id}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        const targetHour = Math.floor(startMin / 60);
+                        handleDrop(e, dateStr, targetHour);
+                      }}
                       style={{
                         top: `${topPx}px`,
                         height: `${Math.max(heightPx, 20)}px`,
