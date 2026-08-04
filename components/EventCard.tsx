@@ -14,14 +14,6 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
   const isPostponed = rawTitle.includes('日延べ');
   const shouldDim = isPostponed || (isCompleted && !isUndecided);
 
-  const handleAddressClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (event.address) {
-      const mapUrl = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
-      window.open(mapUrl, '_blank', 'noopener,noreferrer');
-    }
-  };
-
   // ドラッグ開始時にイベントIDを転送する
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('text/plain', event.id.toString());
@@ -42,15 +34,6 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
         <div className="leading-tight break-words pr-4">
           {event.title}
         </div>
-        {event.address && (
-          <div 
-            onClick={handleAddressClick}
-            className="text-[10px] opacity-90 mt-0.5 break-words hover:underline cursor-pointer inline-block"
-            title="クリックしてGoogleマップで開く"
-          >
-            {event.address}
-          </div>
-        )}
       </div>
 
       {onDelete && (
