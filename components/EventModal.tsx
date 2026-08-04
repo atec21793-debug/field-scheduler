@@ -61,7 +61,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .trim();
 
     if (postponeType === 'undecided') {
-      // 未定の場合：現在の予定タイトルを「日延べ [元のタイトル]」に更新
+      // 未定の場合：現在の予定タイトルを「日延べ [元のタイトル]」に更新（半透明にしない）
       const newTitle = `日延べ ${cleanTitle}`.trim();
       const { error } = await supabase
         .from('events')
@@ -73,8 +73,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         onClose();
       }
     } else {
-      // 日程と時間を選んだ場合：元の長さ（duration）を計算して新しい終了時間を算出
-      let durationMinutes = 60; // デフォルト1時間
+      // 日程を決めて新規作成する場合：
+      // 1. 新しい日付でカードを新規作成（先頭に🔁）
+      let durationMinutes = 60;
       if (event.start_time && event.end_time) {
         const startMin = timeToMinutes(event.start_time);
         const endMin = timeToMinutes(event.end_time);
@@ -107,7 +108,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         },
       ]);
 
-      if (!insertError) {
+      if (insertError) return;
+
+      // 2. 元のカードを「完了（completed）」にして半透明にする
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ status: 'completed' })
+        .eq('id', event.id);
+
+      if (!updateError) {
         onUpdate();
         onClose();
       }
@@ -238,7 +247,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </button>
           </div>
 
-          {/* 日延べ選択フォーム（「日延べ」ボタンを押したときに展開） */}
+          {/* 日延べ選択フォーム */}
           {showPostponeForm && !isPostponedUndecided && (
             <form onSubmit={handleConfirmPostpone} className="bg-amber-50/60 p-4 rounded-lg border border-amber-200 space-y-3">
               <h4 className="text-xs font-bold text-amber-900">日延べの処理を選択</h4>
@@ -250,7 +259,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'undecided'}
                     onChange={() => setPostponeType('undecided')}
                   />
-                  <span>未定（日延べと表示）</span>
+                  <span>未定（日延べと表示・透過しない）</span>
                 </label>
                 <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
@@ -259,7 +268,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'date'}
                     onChange={() => setPostponeType('date')}
                   />
-                  <span>日程を決めて新規作成</span>
+                  <span>日程を決めて新規作成（元は半透明）</span>
                 </label>
               </div>
 
