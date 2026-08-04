@@ -110,7 +110,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     setSelectedMember('天野');
   };
 
-  // お休みを確定して保存（緑色 #22c55e で保存）
+  // お休みを確定して保存（#388ddd で保存）
   const handleConfirmHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDateForHoliday) return;
@@ -121,7 +121,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       {
         title: holidayTitle,
         date: selectedDateForHoliday,
-        color: '#22c55e', // 緑色に変更
+        color: '#388ddd',
         status: 'active',
       },
     ]);
@@ -145,16 +145,16 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
 
   return (
     <div className="flex flex-col h-full bg-white select-none overflow-x-auto relative">
-      {/* ヘッダー部分（日付の下に緑色の休みカードを表示） */}
+      {/* ヘッダー部分（日付の下に #388ddd の休みカードを表示） */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 pr-[17px]">
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
         <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
           {weekDays.map((date, index) => {
             const dateStr = formatDateStr(date);
             const dayEvents = events.filter((ev) => ev.date === dateStr);
-            // 休みカード（🎌が含まれる、またはカラーが緑色 #22c55e のもの）
+            // 休みカード（🎌が含まれる、またはカラーが #388ddd のもの）
             const holidayEvents = dayEvents.filter(
-              (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#22c55e'
+              (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
             );
             const isToday = new Date().toDateString() === date.toDateString();
 
@@ -170,7 +170,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   {date.getDate()}
                 </span>
                 
-                {/* 日付の下の緑色カード表示エリア */}
+                {/* 日付の下の #388ddd カード表示エリア */}
                 <div className="mt-1 flex flex-col gap-1 w-full items-center">
                   {holidayEvents.map((ev) => (
                     <div
@@ -203,7 +203,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         <div className="grid grid-cols-7 flex-1 relative divide-x divide-gray-200">
           {weekDays.map((date, dayIndex) => {
             const dateStr = formatDateStr(date);
-            // 通常の予定（緑色の休みカード以外）を表示対象にする
+            // 通常の予定（#388ddd の休みカード以外）を表示対象にする
             const dayEvents = events.filter((ev) => {
               const isHoliday = (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd';
               return ev.date === dateStr && !isHoliday;
