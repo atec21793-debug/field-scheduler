@@ -35,7 +35,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const HOUR_HEIGHT = 40;
 
-  // 正しく YYYY-MM-DD 形式の文字列を生成するよう修正
   const formatDateStr = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -135,10 +134,31 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
             }
 
             const finalPositionedEvents: PositionedEvent[] = tempPositionedEvents.map((item) => {
-              const overlapping = tempPositionedEvents.filter(
-                (other) => item.startMin < other.endMin && item.endMin > other.startMin
-              );
-              const maxColInGroup = Math.max(...overlapping.map((o) => o.colIndex), item.colIndex);
+              const getConnectedGroup = (target: typeof tempPositionedEvents[0]) => {
+                const visited = new Set<string>();
+                const queue = [target];
+                visited.add(String(target.event.id));
+
+                const group = [];
+
+                while (queue.length > 0) {
+                  const current = queue.shift()!;
+                  group.push(current);
+
+                  for (const other of tempPositionedEvents) {
+                    if (!visited.has(String(other.event.id))) {
+                      if (current.startMin < other.endMin && current.endMin > other.startMin) {
+                        visited.add(String(other.event.id));
+                        queue.push(other);
+                      }
+                    }
+                  }
+                }
+                return group;
+              };
+
+              const group = getConnectedGroup(item);
+              const maxColInGroup = Math.max(...group.map((g) => g.colIndex));
               const totalCols = maxColInGroup + 1;
 
               return {
@@ -168,6 +188,10 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const widthPercent = 100 / totalCols;
                   const leftPercent = colIndex * widthPercent;
 
+                  // 完了状態（status === 'completed' または is_completed など、プロジェクトのプロパティに合わせて調整してください）
+                  // ここでは一般的な判定として event.status === 'completed' または event.completed を想定、なければ適宜変更してください
+                  const isCompleted = event.status === 'completed' || (event as any).completed;
+
                   return (
                     <div
                       key={event.id}
@@ -180,7 +204,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                         padding: '1px',
                         zIndex: 10 + colIndex,
                       }}
-                      className="overflow-hidden box-border"
+                      className={`overflow-hidden box-border transition-opacity ${isCompleted ? 'opacity-50' : 'opacity-100'}`}
                     >
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
                     </div>
