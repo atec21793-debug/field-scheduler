@@ -188,15 +188,15 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const widthPercent = 100 / totalCols;
                   const leftPercent = colIndex * widthPercent;
 
-                  // 完了状態の判定（データ構造に合わせて変更してください）
+                  // 完了状態の判定
                   const isCompleted = event.status === 'completed' || (event as any).completed;
                   
-                  // 日延べ未定（あるいは単に「日延べ」を含むもの）は半透明にしない
+                  // 「日延べ未定」や「日延べ」という文字列が含まれている場合は半透明にしない
                   const title = event.title || '';
-                  const isDayPostponed = title.includes('日延べ') || (event as any).type === '日延べ';
+                  const isPostponed = title.includes('日延べ') || (event as any).type === '日延べ';
                   
-                  // 完了していて、かつ日延べ系ではない場合のみ半透明にする
-                  const shouldDim = isCompleted && !isDayPostponed;
+                  // 完了していて、かつ「日延べ」が含まれていない場合のみ半透明にする
+                  const shouldDim = isCompleted && !isPostponed;
 
                   return (
                     <div
