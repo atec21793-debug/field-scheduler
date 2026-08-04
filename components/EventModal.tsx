@@ -12,12 +12,12 @@ interface EventModalProps {
 }
 
 const COLOR_OPTIONS = [
-  { label: 'ブルー', value: 'bg-blue-600' },
-  { label: 'レッド', value: 'bg-red-600' },
-  { label: 'グリーン', value: 'bg-green-600' },
-  { label: 'オレンジ', value: 'bg-orange-600' },
-  { label: 'パープル', value: 'bg-purple-600' },
-  { label: 'グレー', value: 'bg-gray-600' },
+  { label: 'グレー', value: '#4b5563' },
+  { label: '赤', value: '#dc2626' },
+  { label: '濃い青', value: '#1e3a8a' },
+  { label: '水色', value: '#38bdf8' },
+  { label: '黄色', value: '#cab919' },
+  { label: '紫', value: '#7c3aed' },
 ];
 
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
@@ -28,7 +28,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [startTime, setStartTime] = useState(event.start_time || '');
   const [endTime, setEndTime] = useState(event.end_time || '');
   const [address, setAddress] = useState(event.address || '');
-  const [selectedColor, setSelectedColor] = useState(event.color || 'bg-blue-600');
+  const [selectedColor, setSelectedColor] = useState(event.color || '#1e3a8a');
 
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
@@ -296,7 +296,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               </div>
 
-              {/* カラー選択 */}
+              {/* カラー選択（インラインスタイルでカラーコードを反映） */}
               <div>
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">カードの色</label>
                 <div className="flex space-x-2">
@@ -305,7 +305,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                       key={colorObj.value}
                       type="button"
                       onClick={() => setSelectedColor(colorObj.value)}
-                      className={`w-6 h-6 rounded-full ${colorObj.value} transition transform ${
+                      style={{ backgroundColor: colorObj.value }}
+                      className={`w-6 h-6 rounded-full transition transform ${
                         selectedColor === colorObj.value ? 'ring-2 ring-offset-2 ring-blue-600 scale-110' : 'opacity-70 hover:opacity-100'
                       }`}
                       title={colorObj.label}
