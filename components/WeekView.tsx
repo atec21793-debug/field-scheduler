@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import EventCard from './EventCard';
 import { supabase } from '@/lib/supabase';
@@ -37,6 +37,11 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const HOUR_HEIGHT = 40;
 
+  // モーダル用state
+  const [selectedDateForHoliday, setSelectedDateForHoliday] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<string>('天野');
+  const members = ['天野', '佐々木', '山岡'];
+
   const formatDateStr = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -63,8 +68,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const targetEvent = events.find((ev) => ev.id === eventId);
     if (!targetEvent) return;
 
-    // 1. もともとの予定の長さを計算（分単位）
-    let durationMinutes = 60; // デフォルト1時間
+    let durationMinutes = 60;
     if (targetEvent.start_time && targetEvent.end_time) {
       const startMin = timeToMinutes(targetEvent.start_time);
       const endMin = timeToMinutes(targetEvent.end_time);
@@ -73,7 +77,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       }
     }
 
-    // 2. 新しい開始時間と終了時間を計算
     const newStartH = targetHour;
     const newStartM = targetEvent.start_time ? Number(targetEvent.start_time.split(':')[1]) || 0 : 0;
     
@@ -87,7 +90,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // 3. Supabaseを更新
     const { error } = await supabase.from('events').update({
       date: targetDateStr,
       start_time: newStartTime,
@@ -102,20 +104,86 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     }
   };
 
+  // ヘッダーのセルをクリックしたとき（ドロップダウンモーダルを開く）
+  const handleHeaderClick = (dateStr: string) => {
+    setSelectedDateForHoliday(dateStr);
+    setSelectedMember('天野');
+  };
+
+  // お休みを確定して保存
+  const handleConfirmHoliday = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDateForHoliday) return;
+
+    const holidayTitle = `${selectedMember} 🎌`;
+
+    const { error } = await supabase.from('events').insert([
+      {
+        title: holidayTitle,
+        date: selectedDateForHoliday,
+        color: '#38bdf8', // 水色
+        status: 'active',
+      },
+    ]);
+
+    if (!error && onUpdate) {
+      onUpdate();
+    }
+    setSelectedDateForHoliday(null);
+  };
+
+  // 水色の休みカードをクリックしたときの削除処理
+  const handleHolidayDelete = async (e: React.MouseEvent, eventId: number) => {
+    e.stopPropagation();
+    if (confirm('このお休みの予定を削除しますか？')) {
+      const { error } = await supabase.from('events').delete().eq('id', eventId);
+      if (!error && onUpdate) {
+        onUpdate();
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white select-none overflow-x-auto">
-      {/* ヘッダー部分 */}
+    <div className="flex flex-col h-full bg-white select-none overflow-x-auto relative">
+      {/* ヘッダー部分（日付の下に水色の休みカードを表示、クリックでドロップダウン） */}
       <div className="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 pr-[17px]">
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
         <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
           {weekDays.map((date, index) => {
+            const dateStr = formatDateStr(date);
+            const dayEvents = events.filter((ev) => ev.date === dateStr);
+            // 休みカード（🎌が含まれる、またはカラーが水色のもの）
+            const holidayEvents = dayEvents.filter(
+              (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#38bdf8'
+            );
             const isToday = new Date().toDateString() === date.toDateString();
+
             return (
-              <div key={index} className="flex flex-col items-center py-2">
+              <div 
+                key={index} 
+                className="flex flex-col items-center py-2 px-1 cursor-pointer hover:bg-gray-100 transition"
+                onClick={() => handleHeaderClick(dateStr)}
+                title="クリックして休みを追加"
+              >
                 <span>{weekDayNames[index]}</span>
                 <span className={`mt-1 text-sm h-7 w-7 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white font-bold' : 'text-gray-800'}`}>
                   {date.getDate()}
                 </span>
+                
+                {/* 日付の下の水色カード表示エリア */}
+                <div className="mt-1 flex flex-col gap-1 w-full items-center">
+                  {holidayEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      style={{ backgroundColor: ev.color || '#38bdf8' }}
+                      className="text-white text-[10px] px-1 py-0.5 rounded shadow-sm w-full text-center truncate"
+                      onClick={(e) => handleHolidayDelete(e, ev.id)}
+                      title="クリックして削除"
+                    >
+                      {ev.title}
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -135,7 +203,11 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         <div className="grid grid-cols-7 flex-1 relative divide-x divide-gray-200">
           {weekDays.map((date, dayIndex) => {
             const dateStr = formatDateStr(date);
-            const dayEvents = events.filter((ev) => ev.date === dateStr);
+            // 通常の予定（休みカード以外のもの）を表示対象にする
+            const dayEvents = events.filter((ev) => {
+              const isHoliday = (ev.title && ev.title.includes('🎌')) || ev.color === '#38bdf8';
+              return ev.date === dateStr && !isHoliday;
+            });
 
             const parsedEvents: ParsedEvent[] = dayEvents.map((event) => {
               const startStr = event.start_time || '09:00';
@@ -246,7 +318,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const widthPercent = 100 / totalCols;
                   const leftPercent = colIndex * widthPercent;
 
-                  // 半透明・完了判定
                   const isCompleted = event.status === 'completed' || (event as any).completed;
                   const title = event.title || '';
                   const isUndecided = title.includes('日延未定');
@@ -276,6 +347,44 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
           })}
         </div>
       </div>
+
+      {/* メンバー選択用のドロップダウンモーダル */}
+      {selectedDateForHoliday && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedDateForHoliday(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-gray-800 mb-3">お休み登録 ({selectedDateForHoliday})</h3>
+            <form onSubmit={handleConfirmHoliday} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">メンバー選択</label>
+                <select
+                  value={selectedMember}
+                  onChange={(e) => setSelectedMember(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {members.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex space-x-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDateForHoliday(null)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700"
+                >
+                  追加
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
