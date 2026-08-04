@@ -76,7 +76,13 @@ export default function Home() {
           <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
         )}
         {viewMode === 'week' && (
-          <WeekView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
+          <WeekView 
+            currentDate={currentDate} 
+            events={events} 
+            onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
+            onCellClick={handleCellClick} 
+            onUpdate={fetchEvents} 
+          />
         )}
         {viewMode === 'day' && (
           <DayView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />

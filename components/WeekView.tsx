@@ -1,12 +1,14 @@
 import React from 'react';
 import { EventItem } from '@/app/page';
 import EventCard from './EventCard';
+import { supabase } from '@/lib/supabase';
 
 interface WeekViewProps {
   currentDate: Date;
   events: EventItem[];
   onSelectEvent: (event: EventItem) => void;
   onCellClick: (dateStr: string, timeStr?: string) => void;
+  onUpdate?: () => void | Promise<void>;
 }
 
 interface ParsedEvent {
@@ -20,7 +22,7 @@ interface PositionedEvent extends ParsedEvent {
   totalCols: number;
 }
 
-export default function WeekView({ currentDate, events, onSelectEvent, onCellClick }: WeekViewProps) {
+export default function WeekView({ currentDate, events, onSelectEvent, onCellClick, onUpdate }: WeekViewProps) {
   const startOfWeek = new Date(currentDate);
   const day = startOfWeek.getDay();
   startOfWeek.setDate(startOfWeek.getDate() - day);
@@ -49,6 +51,55 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const h = parseInt(parts[0], 10) || 0;
     const m = parseInt(parts[1], 10) || 0;
     return h * 60 + m;
+  };
+
+  // 📅 ドラッグ＆ドロップで予定を移動する処理
+  const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
+    e.preventDefault();
+    const eventIdStr = e.dataTransfer.getData('text/plain');
+    if (!eventIdStr) return;
+
+    const eventId = Number(eventIdStr);
+    const targetEvent = events.find((ev) => ev.id === eventId);
+    if (!targetEvent) return;
+
+    // 1. もともとの予定の長さを計算（分単位）
+    let durationMinutes = 60; // デフォルト1時間
+    if (targetEvent.start_time && targetEvent.end_time) {
+      const startMin = timeToMinutes(targetEvent.start_time);
+      const endMin = timeToMinutes(targetEvent.end_time);
+      if (endMin > startMin) {
+        durationMinutes = Math.max(endMin - startMin, 30);
+      }
+    }
+
+    // 2. 新しい開始時間と終了時間を計算
+    const newStartH = targetHour;
+    const newStartM = targetEvent.start_time ? Number(targetEvent.start_time.split(':')[1]) || 0 : 0;
+    
+    const newStartTotalMin = newStartH * 60 + newStartM;
+    const newEndTotalMin = newStartTotalMin + durationMinutes;
+
+    const newEndH = Math.floor(newEndTotalMin / 60) % 24;
+    const newEndM = newEndTotalMin % 60;
+
+    const newStartTime = `${newStartH.toString().padStart(2, '0')}:${newStartM.toString().padStart(2, '0')}`;
+    const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
+    const newTimeString = `${newStartTime} - ${newEndTime}`;
+
+    // 3. Supabaseを更新
+    const { error } = await supabase.from('events').update({
+      date: targetDateStr,
+      start_time: newStartTime,
+      end_time: newEndTime,
+      time: newTimeString,
+    }).eq('id', eventId);
+
+    if (!error && onUpdate) {
+      onUpdate();
+    } else if (!error) {
+      window.location.reload();
+    }
   };
 
   return (
@@ -168,13 +219,20 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
             });
 
             return (
-              <div key={dayIndex} className="relative" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
+              <div 
+                key={dayIndex} 
+                className="relative" 
+                style={{ height: `${24 * HOUR_HEIGHT}px` }}
+                onDragOver={(e) => e.preventDefault()}
+              >
                 {hours.map((hour) => {
                   const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
                   return (
                     <div
                       key={hour}
                       onClick={() => onCellClick(dateStr, timeSlot)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleDrop(e, dateStr, hour)}
                       style={{ height: `${HOUR_HEIGHT}px` }}
                       className="border-b border-gray-100 hover:bg-blue-50/30 cursor-pointer"
                     />
@@ -188,6 +246,13 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const widthPercent = 100 / totalCols;
                   const leftPercent = colIndex * widthPercent;
 
+                  // 半透明・完了判定
+                  const isCompleted = event.status === 'completed' || (event as any).completed;
+                  const title = event.title || '';
+                  const isUndecided = title.includes('日延未定');
+                  const isPostponed = title.includes('日延べ');
+                  const shouldDim = isPostponed || (isCompleted && !isUndecided);
+
                   return (
                     <div
                       key={event.id}
@@ -200,7 +265,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                         padding: '1px',
                         zIndex: 10 + colIndex,
                       }}
-                      className="overflow-hidden box-border"
+                      className={`overflow-hidden box-border transition-opacity ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
                     >
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
                     </div>

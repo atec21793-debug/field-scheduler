@@ -8,26 +8,33 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, onClick, onDelete }: EventCardProps) {
-  // 1. 完了状態の判定
   const isCompleted = event.status === 'completed' || (event as any).completed;
-
-  // 2. タイトルを取得
   const title = event.title || '';
-
-  // 3. タイトルの内容でフラグを判定
-  const isUndecided = title.includes('日延未定'); // 未定のもの
-  const isPostponed = title.includes('日延べ');  // 日程が決まって日延べされたもの
-
-  // 4. 半透明（opacity-50）にする条件：
-  // ・「日延べ」の文字が含まれている（日程が決まった側）
-  // ・ または、完了していて、かつ「日延未定」ではないもの
+  const isUndecided = title.includes('日延未定');
+  const isPostponed = title.includes('日延べ');
   const shouldDim = isPostponed || (isCompleted && !isUndecided);
+
+  const handleAddressClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (event.address) {
+      const mapUrl = `https://maps.google.com/?q=${encodeURIComponent(event.address)}`;
+      window.open(mapUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // ドラッグ開始時にイベントIDを転送する
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', event.id.toString());
+    e.dataTransfer.effectAllowed = 'move';
+  };
 
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       onClick={onClick}
       style={{ backgroundColor: event.color || '#4b5563' }}
-      className={`w-full h-full text-white text-xs p-1 rounded shadow-sm cursor-pointer hover:opacity-90 flex flex-col justify-between overflow-hidden box-border whitespace-normal break-words relative group transition-opacity ${
+      className={`w-full h-full text-white text-xs p-1 rounded shadow-sm cursor-grab active:cursor-grabbing hover:opacity-90 flex flex-col justify-between overflow-hidden box-border whitespace-normal break-words relative group transition-opacity ${
         shouldDim ? 'opacity-50' : 'opacity-100'
       }`}
     >
@@ -36,7 +43,11 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
           {event.title}
         </div>
         {event.address && (
-          <div className="text-[10px] opacity-90 mt-0.5 break-words">
+          <div 
+            onClick={handleAddressClick}
+            className="text-[10px] opacity-90 mt-0.5 break-words hover:underline cursor-pointer inline-block"
+            title="クリックしてGoogleマップで開く"
+          >
             {event.address}
           </div>
         )}
