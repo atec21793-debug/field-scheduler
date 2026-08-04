@@ -20,6 +20,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [showPostponeForm, setShowPostponeForm] = useState(false);
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('undecided');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
+  const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
   // 完了にする処理
   const handleToggleComplete = async () => {
@@ -35,6 +36,21 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
+  // 時間文字列（HH:mm）を分に変換するヘルパー
+  const timeToMinutes = (timeStr?: string | null) => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  // 分を時間文字列（HH:mm）に変換するヘルパー
+  const minutesToTime = (totalMinutes: number) => {
+    const clamped = Math.max(0, Math.min(totalMinutes, 24 * 60 - 1));
+    const h = Math.floor(clamped / 60);
+    const m = clamped % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
   // 日延べ登録の実行
   const handleConfirmPostpone = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +61,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .trim();
 
     if (postponeType === 'undecided') {
-      // 未定の場合：現在の予定タイトルを「日延べ [元のタイトル]」に更新（半透明にしない）
+      // 未定の場合：現在の予定タイトルを「日延べ [元のタイトル]」に更新
       const newTitle = `日延べ ${cleanTitle}`.trim();
       const { error } = await supabase
         .from('events')
@@ -57,16 +73,33 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         onClose();
       }
     } else {
-      // 日程を決めた場合：新しい日付でカードを新規作成し、タイトル先頭に「🔁」をつける
+      // 日程と時間を選んだ場合：元の長さ（duration）を計算して新しい終了時間を算出
+      let durationMinutes = 60; // デフォルト1時間
+      if (event.start_time && event.end_time) {
+        const startMin = timeToMinutes(event.start_time);
+        const endMin = timeToMinutes(event.end_time);
+        if (endMin > startMin) {
+          durationMinutes = endMin - startMin;
+        }
+      }
+
+      const newStartMin = timeToMinutes(newPostponeTime);
+      const newEndMin = newStartMin + durationMinutes;
+
+      const newStartTimeStr = minutesToTime(newStartMin);
+      const newEndTimeStr = minutesToTime(newEndMin);
+      const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
+
       const newCardTitle = `🔁 ${cleanTitle}`.trim();
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
           date: newPostponeDate,
+          time: newTimeString,
+          start_time: newStartTimeStr,
+          end_time: newEndTimeStr,
           member: event.member,
           address: event.address,
-          start_time: event.start_time,
-          end_time: event.end_time,
           color: event.color,
           memo: event.memo,
           report: event.report,
@@ -231,15 +264,27 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               </div>
 
               {postponeType === 'date' && (
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">移動先の新しい日付</label>
-                  <input
-                    type="date"
-                    value={newPostponeDate}
-                    onChange={(e) => setNewPostponeDate(e.target.value)}
-                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付</label>
+                    <input
+                      type="date"
+                      value={newPostponeDate}
+                      onChange={(e) => setNewPostponeDate(e.target.value)}
+                      className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">開始時間</label>
+                    <input
+                      type="time"
+                      value={newPostponeTime}
+                      onChange={(e) => setNewPostponeTime(e.target.value)}
+                      className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                      required
+                    />
+                  </div>
                 </div>
               )}
 
