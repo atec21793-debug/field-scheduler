@@ -66,14 +66,12 @@ export default function Home() {
     setIsCreateModalOpen(true);
   };
 
-  // 検索キーワード（タイトル・メンバー・住所）でイベントをフィルタリング
+  // 検索キーワード（タイトルのみ）でイベントをフィルタリング
   const filteredEvents = events.filter((ev) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     const title = (ev.title || '').toLowerCase();
-    const member = (ev.member || '').toLowerCase();
-    const address = (ev.address || '').toLowerCase();
-    return title.includes(query) || member.includes(query) || address.includes(query);
+    return title.includes(query);
   });
 
   return (
