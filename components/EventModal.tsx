@@ -24,7 +24,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     { label: '赤', value: '#dc2626' },
     { label: '濃い青', value: '#1e3a8a' },
     { label: '水色', value: '#38bdf8' },
-    { label: '黄色', value: '#f8ed50' },
+    { label: '黄色', value: '#dbc546' },
     { label: '紫', value: '#7c3aed' },
   ];
   const [color, setColor] = useState(event.color || colorOptions[0].value);
