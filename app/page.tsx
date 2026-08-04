@@ -81,7 +81,8 @@ export default function Home() {
             events={events} 
             onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
             onCellClick={handleCellClick} 
-            onUpdate={fetchEvents} 
+            onUpdate={fetchEvents}
+            onNavigate={(dir) => handleNavigate(dir)} 
           />
         )}
         {viewMode === 'day' && (
