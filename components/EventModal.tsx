@@ -31,6 +31,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   // 日付の代わりに 'undecided' を選べるようにするステート
   const [rescheduleType, setRescheduleType] = useState<'date' | 'undecided'>('date');
   const [newDate, setNewDate] = useState(event.date);
+  // 日延べ先の新しい開始時間（初期値はもともとの開始時間）
+  const [newStartTime, setNewStartTime] = useState(event.start_time || '09:00');
 
   const timeOptions: string[] = [];
   for (let hour = 0; hour < 24; hour++) {
@@ -71,24 +73,22 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
 
     if (rescheduleType === 'undecided') {
-      // 1. 「未定」にする場合：元のタイトルの先頭に「[日延べ]」を付与し、日付や場所はそのままにする
-      const updatedTitle = event.title.startsWith('[日延べ]') 
-        ? event.title 
-        : `[日延べ] ${event.title}`;
+      // 「未定」にする場合：タイトルの先頭に「[日延未定]」を付与する
+      const cleanTitle = event.title.replace(/^\[(日延べ|日延未定)\]\s*/, '');
+      const undecidedTitle = `[日延未定] ${cleanTitle}`;
 
       const { error } = await supabase.from('events').update({
-        title: updatedTitle,
+        title: undecidedTitle,
       }).eq('id', event.id);
 
       if (!error) { onUpdate(); onClose(); }
     } else {
       // 2. 日程が決まっている場合：
       // ① 元のカードを半透明にするためタイトルに「[日延べ]」を付与
-      // ② 選択した日付に新しいカードを新規追加する
+      // ② 新しい日付と新しい開始時間、そして「もともとの長さ（分数）」を維持した終了時間を計算して新規追加する
 
-      const postponedTitle = event.title.startsWith('[日延べ]') 
-        ? event.title 
-        : `[日延べ] ${event.title}`;
+      const cleanTitle = event.title.replace(/^\[(日延べ|日延未定)\]\s*/, '');
+      const postponedTitle = `[日延べ] ${cleanTitle}`;
 
       // A. 元のカードを更新（半透明の目印としてタイトルに [日延べ] を付与）
       const { error: updateError } = await supabase.from('events').update({
@@ -97,14 +97,35 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (updateError) return;
 
-      // B. 新しい日付に新規カードを作成（「日延べ」の文字を取り除いた本来のタイトルを引き継ぐ）
-      const originalTitle = event.title.replace(/^\[日延べ\]\s*/, '');
+      // B. もともとのイベントの長さを計算（分単位）
+      let durationMinutes = 60; // デフォルト1時間
+      if (event.start_time && event.end_time) {
+        const [sh, sm] = event.start_time.split(':').map(Number);
+        const [eh, em] = event.end_time.split(':').map(Number);
+        const startTotalMin = sh * 60 + sm;
+        const endTotalMin = eh * 60 + em;
+        if (endTotalMin > startTotalMin) {
+          durationMinutes = endTotalMin - startTotalMin;
+        }
+      }
+
+      // C. 新しい開始時間から、もともとの長さを足した終了時間を計算
+      const [nsh, nsm] = newStartTime.split(':').map(Number);
+      const newStartTotalMin = nsh * 60 + nsm;
+      const newEndTotalMin = newStartTotalMin + durationMinutes;
+      
+      const newEndH = Math.floor(newEndTotalMin / 60) % 24;
+      const newEndM = newEndTotalMin % 60;
+      const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
+      const newTimeString = `${newStartTime} - ${newEndTime}`;
+
+      // D. 新しい日付に新規カードを作成
       const { error: insertError } = await supabase.from('events').insert([{
-        title: originalTitle,
+        title: cleanTitle,
         date: newDate,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        time: event.time,
+        start_time: newStartTime,
+        end_time: newEndTime,
+        time: newTimeString,
         address: event.address,
         color: event.color,
         status: 'active',
@@ -238,15 +259,29 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
 
                 {rescheduleType === 'date' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">新しい期日</label>
-                    <input 
-                      type="date" 
-                      value={newDate} 
-                      onChange={(e) => setNewDate(e.target.value)} 
-                      required 
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" 
-                    />
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">新しい期日</label>
+                      <input 
+                        type="date" 
+                        value={newDate} 
+                        onChange={(e) => setNewDate(e.target.value)} 
+                        required 
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center">
+                        <Clock size={14} className="mr-1" />新しい開始時間（長さは維持されます）
+                      </label>
+                      <select 
+                        value={newStartTime} 
+                        onChange={(e) => setNewStartTime(e.target.value)} 
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                      >
+                        {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>
