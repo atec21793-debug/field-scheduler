@@ -175,7 +175,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   {holidayEvents.map((ev) => (
                     <div
                       key={ev.id}
-                      style={{ backgroundColor: ev.color || '#22c55e' }}
+                      style={{ backgroundColor: ev.color || '#388ddd' }}
                       className="text-white text-[10px] px-1 py-0.5 rounded shadow-sm w-full text-center truncate"
                       onClick={(e) => handleHolidayDelete(e, ev.id)}
                       title="クリックして削除"
@@ -205,7 +205,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
             const dateStr = formatDateStr(date);
             // 通常の予定（緑色の休みカード以外）を表示対象にする
             const dayEvents = events.filter((ev) => {
-              const isHoliday = (ev.title && ev.title.includes('🎌')) || ev.color === '#22c55e';
+              const isHoliday = (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd';
               return ev.date === dateStr && !isHoliday;
             });
 
