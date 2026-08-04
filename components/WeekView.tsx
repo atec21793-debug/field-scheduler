@@ -188,9 +188,10 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const widthPercent = 100 / totalCols;
                   const leftPercent = colIndex * widthPercent;
 
-                  // 完了状態（status === 'completed' または is_completed など、プロジェクトのプロパティに合わせて調整してください）
-                  // ここでは一般的な判定として event.status === 'completed' または event.completed を想定、なければ適宜変更してください
+                  // 完了状態かつ「日延べ未定」ではない場合のみ半透明にする
                   const isCompleted = event.status === 'completed' || (event as any).completed;
+                  const isDayPostponedUndecided = event.title?.includes('日延べ未定') || (event as any).type === '日延べ未定'; // タイトルや種別に応じて調整してください
+                  const shouldDim = isCompleted && !isDayPostponedUndecided;
 
                   return (
                     <div
@@ -204,7 +205,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                         padding: '1px',
                         zIndex: 10 + colIndex,
                       }}
-                      className={`overflow-hidden box-border transition-opacity ${isCompleted ? 'opacity-50' : 'opacity-100'}`}
+                      className={`overflow-hidden box-border transition-opacity ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
                     >
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
                     </div>
