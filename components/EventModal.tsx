@@ -110,10 +110,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      // 2. 元のカードを「完了（completed）」にして半透明にする
+      // 2. 元のカードのタイトルを「日延べ [元のタイトル]」にしつつ、statusを「completed」にして半透明にする
+      const originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       const { error: updateError } = await supabase
         .from('events')
-        .update({ status: 'completed' })
+        .update({ 
+          title: originalTitleWithPostpone,
+          status: 'completed' 
+        })
         .eq('id', event.id);
 
       if (!updateError) {
@@ -259,7 +263,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'undecided'}
                     onChange={() => setPostponeType('undecided')}
                   />
-                  <span>未定（日延べと表示・透過しない）</span>
+                  <span>未定</span>
                 </label>
                 <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
@@ -268,7 +272,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'date'}
                     onChange={() => setPostponeType('date')}
                   />
-                  <span>日程を決めて新規作成（元は半透明）</span>
+                  <span>日程を決めて新規作成</span>
                 </label>
               </div>
 
