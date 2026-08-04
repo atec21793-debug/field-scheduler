@@ -9,10 +9,14 @@ interface EventCardProps {
 
 export default function EventCard({ event, onClick, onDelete }: EventCardProps) {
   const isCompleted = event.status === 'completed' || (event as any).completed;
-  const title = event.title || '';
-  const isUndecided = title.includes('日延未定');
-  const isPostponed = title.includes('日延べ');
+  const rawTitle = event.title || '';
+  const isUndecided = rawTitle.includes('日延未定');
+  const isPostponed = rawTitle.includes('日延べ');
   const shouldDim = isPostponed || (isCompleted && !isUndecided);
+
+  // タイトルから [日延べ] や [日延未定] を綺麗に取り除き、先頭に「↻」を付与する
+  const cleanTitleText = rawTitle.replace(/^\[(日延べ|日延未定)\]\s*/, '');
+  const displayTitle = (isPostponed || isUndecided) ? `↻ ${cleanTitleText}` : cleanTitleText;
 
   const handleAddressClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,7 +44,7 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
     >
       <div>
         <div className="leading-tight break-words pr-4">
-          {event.title}
+          {displayTitle}
         </div>
         {event.address && (
           <div 
