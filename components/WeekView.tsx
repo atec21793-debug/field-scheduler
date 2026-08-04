@@ -9,7 +9,7 @@ interface WeekViewProps {
   onSelectEvent: (event: EventItem) => void;
   onCellClick: (dateStr: string, timeStr?: string) => void;
   onUpdate?: () => void | Promise<void>;
-  onNavigate?: (direction: 'next' | 'prev') => void; // 週切り替え用のコールバック
+  onNavigate?: (direction: 'next' | 'prev') => void;
 }
 
 interface ParsedEvent {
@@ -190,7 +190,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
           {weekDays.map((date, index) => {
             const dateStr = formatDateStr(date);
             const dayEvents = events.filter((ev) => ev.date === dateStr);
-            // 休みカード（🎌が含まれる、またはカラーが #388ddd のもの）
             const holidayEvents = dayEvents.filter(
               (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
             );
@@ -208,7 +207,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   {date.getDate()}
                 </span>
                 
-                {/* 日付の下の #388ddd カード表示エリア */}
                 <div className="mt-1 flex flex-col gap-1 w-full items-center">
                   {holidayEvents.map((ev) => (
                     <div
@@ -241,7 +239,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         <div className="grid grid-cols-7 flex-1 relative divide-x divide-gray-200">
           {weekDays.map((date, dayIndex) => {
             const dateStr = formatDateStr(date);
-            // 通常の予定（#388ddd の休みカード以外）を表示対象にする
             const dayEvents = events.filter((ev) => {
               const isHoliday = (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd';
               return ev.date === dateStr && !isHoliday;
@@ -264,7 +261,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
               };
             });
 
-            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - b.startMin));
+            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
 
             const tempPositionedEvents: Omit<PositionedEvent, 'totalCols'>[] = [];
             const columns: ParsedEvent[][] = [];
