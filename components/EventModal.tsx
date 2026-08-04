@@ -18,12 +18,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [startTime, setStartTime] = useState(event.start_time || '09:00');
   const [endTime, setEndTime] = useState(event.end_time || '10:00');
   
-  // 指定された5色: グレー、赤、濃い青、黄色、紫
+  // 指定された6色: グレー、赤、濃い青、水色、黄色、紫
   const colorOptions = [
     { label: 'グレー', value: '#4b5563' },
     { label: '赤', value: '#dc2626' },
     { label: '濃い青', value: '#1e3a8a' },
-    { label: '黄色', value: '#d97706' },
+    { label: '水色', value: '#38bdf8' },
+    { label: '黄色', value: '#f8ed50' },
     { label: '紫', value: '#7c3aed' },
   ];
   const [color, setColor] = useState(event.color || colorOptions[0].value);
