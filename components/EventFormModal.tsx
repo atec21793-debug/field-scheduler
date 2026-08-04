@@ -30,7 +30,7 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
     { label: '赤', value: '#dc2626' },
     { label: '濃い青', value: '#1e3a8a' },
     { label: '水色', value: '#38bdf8' },
-    { label: '黄色', value: '#afa014' },
+    { label: '黄色', value: '#cab919' },
     { label: '紫', value: '#7c3aed' },
   ];
   const [color, setColor] = useState(colorOptions[0].value);
