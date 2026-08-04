@@ -24,15 +24,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     { label: '赤', value: '#dc2626' },
     { label: '濃い青', value: '#1e3a8a' },
     { label: '水色', value: '#38bdf8' },
-    { label: '黄色', value: '#dbc546' },
+    { label: '黄色', value: '#d97706' },
     { label: '紫', value: '#7c3aed' },
   ];
   const [color, setColor] = useState(event.color || colorOptions[0].value);
 
-  // 日付の代わりに 'undecided' を選べるようにするステート
   const [rescheduleType, setRescheduleType] = useState<'date' | 'undecided'>('date');
   const [newDate, setNewDate] = useState(event.date);
-  // 日延べ先の新しい開始時間（初期値はもともとの開始時間）
   const [newStartTime, setNewStartTime] = useState(event.start_time || '09:00');
 
   const timeOptions: string[] = [];
@@ -42,7 +40,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   }
 
-  // 開始時間が変わったら自動で1時間後を終了時間に設定（編集時）
   const handleStartTimeChange = (newStart: string) => {
     setStartTime(newStart);
     const [h, m] = newStart.split(':').map(Number);
@@ -73,25 +70,22 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const handleReschedule = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (rescheduleType === 'undecided') {
-      // 「未定」にする場合：タイトルの先頭に「[日延未定]」を付与する
-      const cleanTitle = event.title.replace(/^\[(日延べ|日延未定)\]\s*/, '');
-      const undecidedTitle = `[日延未定] ${cleanTitle}`;
+    // 既存の「[日延べ]」「[日延未定]」「🔁」などのプレフィックスを掃除して元のタイトルを取り出す
+    const cleanTitle = event.title.replace(/^(\[?(日延べ|日延未定)\]?|🔁)\s*/g, '');
 
+    if (rescheduleType === 'undecided') {
+      // 未定にする場合
+      const undecidedTitle = `[日延未定] ${cleanTitle}`;
       const { error } = await supabase.from('events').update({
         title: undecidedTitle,
       }).eq('id', event.id);
 
       if (!error) { onUpdate(); onClose(); }
     } else {
-      // 2. 日程が決まっている場合：
-      // ① 元のカードを半透明にするためタイトルに「[日延べ]」を付与
-      // ② 新しい日付と新しい開始時間、そして「もともとの長さ（分数）」を維持した終了時間を計算して新規追加する
-
-      const cleanTitle = event.title.replace(/^\[(日延べ|日延未定)\]\s*/, '');
+      // 日付を指定して日延べする場合
       const postponedTitle = `[日延べ] ${cleanTitle}`;
 
-      // A. 元のカードを更新（半透明の目印としてタイトルに [日延べ] を付与）
+      // A. 元のカードのタイトルを更新
       const { error: updateError } = await supabase.from('events').update({
         title: postponedTitle,
       }).eq('id', event.id);
@@ -99,7 +93,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       if (updateError) return;
 
       // B. もともとのイベントの長さを計算（分単位）
-      let durationMinutes = 60; // デフォルト1時間
+      let durationMinutes = 60;
       if (event.start_time && event.end_time) {
         const [sh, sm] = event.start_time.split(':').map(Number);
         const [eh, em] = event.end_time.split(':').map(Number);
@@ -110,7 +104,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         }
       }
 
-      // C. 新しい開始時間から、もともとの長さを足した終了時間を計算
+      // C. 新しい終了時間を計算
       const [nsh, nsm] = newStartTime.split(':').map(Number);
       const newStartTotalMin = nsh * 60 + nsm;
       const newEndTotalMin = newStartTotalMin + durationMinutes;
@@ -120,9 +114,11 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
       const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-      // D. 新しい日付に新規カードを作成
+      // D. 新しい日付に新規カードを作成（先頭に「🔁 」を付与）
+      const newCardTitle = `🔁 ${cleanTitle}`;
+
       const { error: insertError } = await supabase.from('events').insert([{
-        title: cleanTitle,
+        title: newCardTitle,
         date: newDate,
         start_time: newStartTime,
         end_time: newEndTime,
@@ -136,7 +132,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // 予定削除のハンドラー
   const handleDelete = async () => {
     if (confirm('この予定を本当に削除しますか？')) {
       const { error } = await supabase.from('events').delete().eq('id', event.id);
@@ -183,7 +178,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 <button onClick={() => setIsRescheduling(true)} className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"><Calendar size={16} className="mr-1.5" />日延べ</button>
               </div>
 
-              {/* 削除ボタン */}
               <div className="pt-1">
                 <button
                   type="button"
