@@ -11,6 +11,18 @@ interface DayViewProps {
   absences?: { member: string; date: string; type: string }[];
   onSelectEvent: (event: EventItem) => void;
   onCellClick: (dateStr: string, timeStr?: string) => void;
+  onUpdate?: () => void | Promise<void>;
+}
+
+interface ParsedEvent {
+  event: EventItem;
+  startMin: number;
+  endMin: number;
+}
+
+interface PositionedEvent extends ParsedEvent {
+  colIndex: number;
+  totalCols: number;
 }
 
 export default function DayView({
@@ -20,8 +32,10 @@ export default function DayView({
   absences = [],
   onSelectEvent,
   onCellClick,
+  onUpdate,
 }: DayViewProps) {
   const HOUR_HEIGHT = 40;
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
   const formatDateStr = (date: Date) => {
     const year = date.getFullYear();
@@ -31,8 +45,10 @@ export default function DayView({
   };
 
   const dateStr = formatDateStr(currentDate);
-  const dayEvents = events.filter((ev) => ev.date === dateStr);
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const dayEvents = events.filter((ev) => {
+    const isHoliday = (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd';
+    return ev.date === dateStr && !isHoliday;
+  });
 
   // この日の休みメンバーを抽出
   const dayAbsences = absences.filter((a) => a.date === dateStr);
@@ -46,51 +62,86 @@ export default function DayView({
     return h * 60 + m;
   };
 
-  const parsedEvents = dayEvents.map((event) => {
-    const startMin = timeToMinutes(event.start_time);
-    // 終了時間がある場合はその通りに計算、なければデフォルトで60分（または30分）
-    let endMin = event.end_time ? timeToMinutes(event.end_time) : startMin + 60;
-    
-    // 終了時間が開始時間より前の場合は最低30分を確保
-    if (endMin <= startMin) {
-      endMin = startMin + 30;
+  const parsedEvents: ParsedEvent[] = dayEvents.map((event) => {
+    const startStr = event.start_time || '09:00';
+    const startMin = timeToMinutes(startStr);
+    let durationMin = 60;
+    if (event.end_time) {
+      const endMin = timeToMinutes(event.end_time);
+      if (endMin > startMin) {
+        durationMin = Math.max(endMin - startMin, 30);
+      }
     }
-
     return {
       event,
       startMin,
-      endMin,
+      endMin: startMin + durationMin,
     };
   });
 
-  // 重なりを解消して正しく並べるためのカラム割り当てロジック
-  const positionedEvents = React.useMemo(() => {
-    return parsedEvents.map((item, i, arr) => {
-      const overlaps = arr.filter((other, j) => {
-        if (i === j) return false;
-        return item.startMin < other.endMin && item.endMin > other.startMin;
-      });
+  parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
 
-      let colIndex = 0;
-      let totalCols = 1;
+  const tempPositionedEvents: Omit<PositionedEvent, 'totalCols'>[] = [];
+  const columns: ParsedEvent[][] = [];
 
-      if (overlaps.length > 0) {
-        const group = [item, ...overlaps].sort((a, b) => {
-          if (a.startMin !== b.startMin) return a.startMin - b.startMin;
-          return String(a.event.id).localeCompare(String(b.event.id));
-        });
-        totalCols = Math.min(group.length, 3);
-        const myIdx = group.findIndex((g) => g.event.id === item.event.id);
-        colIndex = myIdx !== -1 ? myIdx % totalCols : 0;
+  for (const item of parsedEvents) {
+    let colIndex = 0;
+    let placed = false;
+
+    for (let i = 0; i < columns.length; i++) {
+      const lastEventInCol = columns[i][columns[i].length - 1];
+      if (lastEventInCol.endMin <= item.startMin) {
+        columns[i].push(item);
+        colIndex = i;
+        placed = true;
+        break;
       }
+    }
 
-      return {
-        ...item,
-        colIndex,
-        totalCols,
-      };
+    if (!placed) {
+      colIndex = columns.length;
+      columns.push([item]);
+    }
+
+    tempPositionedEvents.push({
+      ...item,
+      colIndex,
     });
-  }, [parsedEvents]);
+  }
+
+  const finalPositionedEvents: PositionedEvent[] = tempPositionedEvents.map((item) => {
+    const getConnectedGroup = (target: typeof tempPositionedEvents[0]) => {
+      const visited = new Set<string>();
+      const queue = [target];
+      visited.add(String(target.event.id));
+
+      const group = [];
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        group.push(current);
+
+        for (const other of tempPositionedEvents) {
+          if (!visited.has(String(other.event.id))) {
+            if (current.startMin < other.endMin && current.endMin > other.startMin) {
+              visited.add(String(other.event.id));
+              queue.push(other);
+            }
+          }
+        }
+      }
+      return group;
+    };
+
+    const group = getConnectedGroup(item);
+    const maxColInGroup = Math.max(...group.map((g) => g.colIndex));
+    const totalCols = maxColInGroup + 1;
+
+    return {
+      ...item,
+      totalCols: Math.max(totalCols, 1),
+    };
+  });
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
@@ -138,28 +189,33 @@ export default function DayView({
             );
           })}
 
-          {positionedEvents.map(({ event, startMin, endMin, colIndex, totalCols }) => {
+          {finalPositionedEvents.map(({ event, startMin, endMin, colIndex, totalCols }) => {
             const durationMin = endMin - startMin;
             const topPx = (startMin / 60) * HOUR_HEIGHT;
-            // 実際の時間差（分）から高さを正確に計算する
             const heightPx = (durationMin / 60) * HOUR_HEIGHT;
             
             const widthPercent = 100 / totalCols;
             const leftPercent = colIndex * widthPercent;
+
+            const isCompleted = event.status === 'completed' || (event as any).completed;
+            const title = event.title || '';
+            const isUndecided = title.includes('日延未定');
+            const isPostponed = title.includes('日延べ');
+            const shouldDim = isPostponed || (isCompleted && !isUndecided);
 
             return (
               <div
                 key={event.id}
                 style={{
                   top: `${topPx}px`,
-                  height: `${heightPx}px`,
+                  height: `${Math.max(heightPx, 20)}px`,
                   position: 'absolute',
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
                   padding: '2px',
                   zIndex: 10 + colIndex,
                 }}
-                className="overflow-hidden box-border"
+                className={`overflow-hidden box-border transition-opacity ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
               >
                 <EventCard event={event} onClick={() => onSelectEvent(event)} />
               </div>
