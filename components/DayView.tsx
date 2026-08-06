@@ -63,32 +63,45 @@ export default function DayView({
     };
   });
 
-  // 週表示と同じ重なり判定・カラム割り当てロジック
-  const positionedEvents = parsedEvents.map((item, i, arr) => {
-    const overlaps = arr.filter((other, j) => {
-      if (i === j) return false;
-      return item.startMin < other.endMin && item.endMin > other.startMin;
+  // 重なりグループを計算してカラムに分割するロジック（週表示と共通）
+  const positionedEvents = React.useMemo(() => {
+    const sorted = [...parsedEvents].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+    const groups: (typeof parsedEvents)[number][][] = [];
+
+    sorted.forEach((item) => {
+      let placed = false;
+      for (const group of groups) {
+        const hasOverlap = group.some(
+          (other) => item.startMin < other.endMin && item.endMin > other.startMin
+        );
+        if (!hasOverlap) {
+          group.push(item);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        groups.push([item]);
+      }
     });
 
-    let colIndex = 0;
-    let totalCols = 1;
+    const result: { event: EventItem; startMin: number; endMin: number; colIndex: number; totalCols: number }[] = [];
 
-    if (overlaps.length > 0) {
-      const group = [item, ...overlaps].sort((a, b) => {
-        if (a.startMin !== b.startMin) return a.startMin - b.startMin;
-        return String(a.event.id).localeCompare(String(b.event.id));
+    parsedEvents.forEach((item) => {
+      // このイベントが含まれる重なりグループを特定
+      const relatedGroup = groups.find((g) => g.some((el) => el.event.id === item.event.id)) || [item];
+      const totalCols = relatedGroup.length;
+      const colIndex = relatedGroup.findIndex((el) => el.event.id === item.event.id);
+
+      result.push({
+        ...item,
+        colIndex: colIndex !== -1 ? colIndex : 0,
+        totalCols: totalCols > 0 ? totalCols : 1,
       });
-      totalCols = group.length;
-      const myIdx = group.findIndex((g) => g.event.id === item.event.id);
-      colIndex = myIdx !== -1 ? myIdx : 0;
-    }
+    });
 
-    return {
-      ...item,
-      colIndex,
-      totalCols,
-    };
-  });
+    return result;
+  }, [parsedEvents]);
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
