@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef } from 'react';
 import { EventItem } from '@/app/page';
 import EventCard from './EventCard';
@@ -354,7 +356,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const isCompleted = event.status === 'completed' || (event as any).completed;
                   const title = event.title || '';
                   const isUndecided = title.includes('日延未定');
-                  const isPostponed = title.includes('日延べ');
+                  const isPostponed = title.includes('日延べ') && !isUndecided;
                   const shouldDim = isPostponed || (isCompleted && !isUndecided);
 
                   return (
