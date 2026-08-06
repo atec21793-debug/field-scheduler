@@ -73,7 +73,10 @@ export default function DayView({
     let totalCols = 1;
 
     if (overlaps.length > 0) {
-      const group = [item, ...overlaps].sort((a, b) => a.startMin - b.startMin || a.event.id - b.event.id);
+      const group = [item, ...overlaps].sort((a, b) => {
+        if (a.startMin !== b.startMin) return a.startMin - b.startMin;
+        return String(a.event.id).localeCompare(String(b.event.id));
+      });
       totalCols = Math.min(group.length, 3);
       const myIdx = group.findIndex((g) => g.event.id === item.event.id);
       colIndex = myIdx !== -1 ? myIdx % totalCols : 0;
@@ -88,13 +91,12 @@ export default function DayView({
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
-      {/* ヘッダー部分：日付と、週表示と同様の休みメンバー表示 */}
+      {/* ヘッダー部分：日付と休みメンバー表示 */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
         <div className="text-base font-bold text-gray-800">
           {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月 {currentDate.getDate()}日
         </div>
 
-        {/* 休みメンバーのバッジ表示 */}
         {dayAbsences.length > 0 && (
           <div className="flex items-center gap-1.5 flex-wrap">
             {dayAbsences.map((abs, idx) => (
