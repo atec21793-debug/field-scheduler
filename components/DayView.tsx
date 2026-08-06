@@ -38,24 +38,28 @@ export default function DayView({
   const dayAbsences = absences.filter((a) => a.date === dateStr);
 
   const timeToMinutes = (timeStr?: string | null) => {
-    if (!timeStr) return 9 * 60; // 指定がない場合はデフォルト9時
+    if (!timeStr) return null;
     const parts = timeStr.split(':');
-    if (parts.length < 2) return 9 * 60;
+    if (parts.length < 2) return null;
     const h = parseInt(parts[0], 10) || 0;
     const m = parseInt(parts[1], 10) || 0;
     return h * 60 + m;
   };
 
   const parsedEvents = dayEvents.map((event) => {
-    const startMin = timeToMinutes(event.start_time);
-    let endMin = event.end_time ? timeToMinutes(event.end_time) : startMin + 60;
-    if (endMin <= startMin) {
-      endMin = startMin + 60;
+    const startMin = timeToMinutes(event.start_time) ?? 9 * 60; // デフォルト9時
+    let endMin = timeToMinutes(event.end_time);
+
+    // 終了時間がない、または開始時間より前になっている場合は、デフォルトで1時間（60分）に固定する
+    let duration = 60;
+    if (endMin !== null && endMin > startMin) {
+      duration = Math.min(endMin - startMin, 240); // 最大でも4時間を上限として極端な引き伸ばしを防止
     }
+
     return {
       event,
       startMin,
-      endMin,
+      endMin: startMin + duration,
     };
   });
 
