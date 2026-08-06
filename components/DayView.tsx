@@ -63,6 +63,7 @@ export default function DayView({
     };
   });
 
+  // 週表示と同じ重なり判定・カラム割り当てロジック
   const positionedEvents = parsedEvents.map((item, i, arr) => {
     const overlaps = arr.filter((other, j) => {
       if (i === j) return false;
@@ -77,9 +78,9 @@ export default function DayView({
         if (a.startMin !== b.startMin) return a.startMin - b.startMin;
         return String(a.event.id).localeCompare(String(b.event.id));
       });
-      totalCols = Math.min(group.length, 3);
+      totalCols = group.length;
       const myIdx = group.findIndex((g) => g.event.id === item.event.id);
-      colIndex = myIdx !== -1 ? myIdx % totalCols : 0;
+      colIndex = myIdx !== -1 ? myIdx : 0;
     }
 
     return {
