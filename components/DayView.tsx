@@ -37,70 +37,60 @@ export default function DayView({
   // この日の休みメンバーを抽出
   const dayAbsences = absences.filter((a) => a.date === dateStr);
 
-  const timeToMinutes = (timeStr?: string) => {
-    if (!timeStr) return 0;
+  const timeToMinutes = (timeStr?: string | null) => {
+    if (!timeStr) return 9 * 60; // 指定がない場合はデフォルト9時
     const parts = timeStr.split(':');
-    if (parts.length < 2) return 0;
+    if (parts.length < 2) return 9 * 60;
     const h = parseInt(parts[0], 10) || 0;
     const m = parseInt(parts[1], 10) || 0;
     return h * 60 + m;
   };
 
   const parsedEvents = dayEvents.map((event) => {
-    const startStr = event.start_time || '09:00';
-    const startMin = timeToMinutes(startStr);
-    
-    let durationMin = 60;
-    if (event.end_time) {
-      const endMin = timeToMinutes(event.end_time);
-      if (endMin > startMin) {
-        durationMin = endMin - startMin;
-      }
+    const startMin = timeToMinutes(event.start_time);
+    let endMin = event.end_time ? timeToMinutes(event.end_time) : startMin + 60;
+    if (endMin <= startMin) {
+      endMin = startMin + 60;
     }
-    // 最小の高さを確保しつつ実際の長さに合わせる
-    const actualDuration = Math.max(durationMin, 30);
-
     return {
       event,
       startMin,
-      endMin: startMin + actualDuration,
+      endMin,
     };
   });
 
-  // 重なりを避けてカラムに割り当てるロジック（最大3カラム）
+  // 重なり判定・カラム割り当てロジック
   const positionedEvents = React.useMemo(() => {
-    const sorted = [...parsedEvents].sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
-    const assigned: { event: EventItem; startMin: number; endMin: number; colIndex: number; totalCols: number }[] = [];
+    return parsedEvents.map((item, i, arr) => {
+      const overlaps = arr.filter((other, j) => {
+        if (i === j) return false;
+        return item.startMin < other.endMin && item.endMin > other.startMin;
+      });
 
-    sorted.forEach((item) => {
-      const overlapping = assigned.filter(
-        (other) => item.startMin < other.endMin && item.endMin > other.startMin
-      );
-
-      const usedCols = new Set(overlapping.map((o) => o.colIndex));
       let colIndex = 0;
-      for (let i = 0; i < 3; i++) {
-        if (!usedCols.has(i)) {
-          colIndex = i;
-          break;
-        }
+      let totalCols = 1;
+
+      if (overlaps.length > 0) {
+        const group = [item, ...overlaps].sort((a, b) => {
+          if (a.startMin !== b.startMin) return a.startMin - b.startMin;
+          return String(a.event.id).localeCompare(String(b.event.id));
+        });
+        totalCols = Math.min(group.length, 3);
+        const myIdx = group.findIndex((g) => g.event.id === item.event.id);
+        colIndex = myIdx !== -1 ? myIdx % totalCols : 0;
       }
 
-      const groupCount = Math.min(Math.max(overlapping.length + 1, 1), 3);
-
-      assigned.push({
+      return {
         ...item,
-        colIndex: Math.min(colIndex, 2),
-        totalCols: groupCount,
-      });
+        colIndex,
+        totalCols,
+      };
     });
-
-    return assigned;
   }, [parsedEvents]);
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
-      {/* ヘッダー部分：日付の右側に休みのメンバーを横並びで配置 */}
+      {/* ヘッダー部分：日付と休みメンバー表示を横並びに */}
       <div className="flex items-center px-4 py-2 border-b bg-gray-50 gap-4 flex-wrap">
         <div className="text-base font-bold text-gray-800">
           {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月 {currentDate.getDate()}日
@@ -149,8 +139,7 @@ export default function DayView({
             const topPx = (startMin / 60) * HOUR_HEIGHT;
             const heightPx = (durationMin / 60) * HOUR_HEIGHT;
             
-            const cols = Math.max(totalCols, 1);
-            const widthPercent = 100 / cols;
+            const widthPercent = 100 / totalCols;
             const leftPercent = colIndex * widthPercent;
 
             return (
