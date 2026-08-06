@@ -1,4 +1,4 @@
-'import client';
+'use client';
 
 import React from 'react';
 import { EventItem } from '@/app/page';
