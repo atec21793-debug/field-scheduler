@@ -38,32 +38,29 @@ export default function DayView({
   const dayAbsences = absences.filter((a) => a.date === dateStr);
 
   const timeToMinutes = (timeStr?: string | null) => {
-    if (!timeStr) return null;
+    if (!timeStr) return 0;
     const parts = timeStr.split(':');
-    if (parts.length < 2) return null;
+    if (parts.length < 2) return 0;
     const h = parseInt(parts[0], 10) || 0;
     const m = parseInt(parts[1], 10) || 0;
     return h * 60 + m;
   };
 
   const parsedEvents = dayEvents.map((event) => {
-    const startMin = timeToMinutes(event.start_time) ?? 9 * 60; // デフォルト9時
-    let endMin = timeToMinutes(event.end_time);
-
-    // 終了時間がない、または開始時間より前になっている場合は、デフォルトで1時間（60分）に固定する
-    let duration = 60;
-    if (endMin !== null && endMin > startMin) {
-      duration = Math.min(endMin - startMin, 240); // 最大でも4時間を上限として極端な引き伸ばしを防止
-    }
+    const startMin = timeToMinutes(event.start_time);
+    const endMin = event.end_time ? timeToMinutes(event.end_time) : startMin + 30;
+    
+    // 最低でも30分（0.5時間分）の高さは確保しつつ、設定された正確な時間を反映
+    const actualDuration = Math.max(endMin - startMin, 30);
 
     return {
       event,
       startMin,
-      endMin: startMin + duration,
+      endMin: startMin + actualDuration,
     };
   });
 
-  // 重なり判定・カラム割り当てロジック
+  // 重なりを解消して正しく並べるためのカラム割り当てロジック
   const positionedEvents = React.useMemo(() => {
     return parsedEvents.map((item, i, arr) => {
       const overlaps = arr.filter((other, j) => {
@@ -94,7 +91,7 @@ export default function DayView({
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
-      {/* ヘッダー部分：日付と休みメンバー表示を横並びに */}
+      {/* ヘッダー部分：日付の右側に休みメンバーを横並びで配置 */}
       <div className="flex items-center px-4 py-2 border-b bg-gray-50 gap-4 flex-wrap">
         <div className="text-base font-bold text-gray-800">
           {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月 {currentDate.getDate()}日
@@ -151,7 +148,7 @@ export default function DayView({
                 key={event.id}
                 style={{
                   top: `${topPx}px`,
-                  height: `${Math.max(heightPx, 30)}px`,
+                  height: `${heightPx}px`,
                   position: 'absolute',
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
