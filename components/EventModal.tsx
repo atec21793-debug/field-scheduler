@@ -101,12 +101,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
     let cleanTitle = (event.title || '')
       .replace(/^🔁\s*/, '')
+      .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
 
     if (postponeType === 'undecided') {
-      const newTitle = `日延べ ${cleanTitle}`.trim();
+      const newTitle = `日延未定 ${cleanTitle}`.trim();
       const { error } = await supabase
         .from('events')
         .update({ title: newTitle })
@@ -172,6 +173,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const handleRemovePostpone = async () => {
     let cleanTitle = (event.title || '')
       .replace(/^🔁\s*/, '')
+      .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
@@ -207,7 +209,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     onUpdate();
   };
 
-  const isPostponedUndecided = (event.title || '').includes('日延べ');
+  const titleStr = event.title || '';
+  const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('('));
 
   // タイトルから日延べ先の日付・時間を抽出して「〇月〇日 00:00〜00:00」形式にフォーマットするヘルパー
   const formatPostponedInfo = (titleStr: string) => {
@@ -434,7 +437,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'undecided'}
                     onChange={() => setPostponeType('undecided')}
                   />
-                  <span>未定（日延べと表示・透過しない）</span>
+                  <span>未定（日延未定と表示・透過しない）</span>
                 </label>
                 <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
