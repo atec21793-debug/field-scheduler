@@ -226,7 +226,7 @@ export default function DayView({
                 <span className="text-[10px] opacity-75">×</span>
               </div>
             ))}
-            <span className="text-xs text-blue-600 font-medium hover:underline ml-1">＋ 休みを追加</span>
+         
           </div>
         </div>
       </div>
