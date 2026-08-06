@@ -65,7 +65,6 @@ export default function DayView({
 
   const timeToMinutes = (timeStr?: string | null) => {
     if (!timeStr) return 0;
-    // 「15:30:00」のような秒付きの文字列や「15:30」に対応
     const parts = timeStr.split(':');
     if (parts.length < 2) return 0;
     const h = parseInt(parts[0], 10) || 0;
@@ -74,24 +73,22 @@ export default function DayView({
   };
 
   const parsedEvents: ParsedEvent[] = normalEvents.map((event) => {
-    // 予期せぬプロパティ名の違いを吸収できるように全パターンをチェック
-    const rawStart = event.start_time || (event as any).startTime || (event as any).start || '09:00';
-    const rawEnd = event.end_time || (event as any).endTime || (event as any).end;
-
-    const startMin = timeToMinutes(rawStart);
-    let durationMin = 60; // デフォルト1時間
-
-    if (rawEnd) {
-      const endMin = timeToMinutes(rawEnd);
-      if (endMin > startMin) {
-        durationMin = endMin - startMin;
+    const startStr = event.start_time || '09:00';
+    const startMin = timeToMinutes(startStr);
+    
+    // 終了時間を正確に計算
+    let endMin = startMin + 60; // デフォルト1時間後
+    if (event.end_time) {
+      const parsedEndMin = timeToMinutes(event.end_time);
+      if (parsedEndMin > startMin) {
+        endMin = parsedEndMin;
       }
     }
 
     return {
       event,
       startMin,
-      endMin: startMin + durationMin,
+      endMin,
     };
   });
 
