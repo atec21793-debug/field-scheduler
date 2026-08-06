@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3 } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight } from 'lucide-react';
 
 interface EventModalProps {
   event: EventItem;
@@ -102,6 +102,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     let cleanTitle = (event.title || '')
       .replace(/^🔁\s*/, '')
       .replace(/^日延べ\s*/, '')
+      .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
 
     if (postponeType === 'undecided') {
@@ -151,7 +152,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      const originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
+      // 日付と時間（例: 2026-08-20 09:00 〜 10:00）をタイトルに含める
+      const originalTitleWithPostpone = `日延べ (${newPostponeDate} ${newStartTimeStr} 〜 ${newEndTimeStr}) ${cleanTitle}`.trim();
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -172,6 +174,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     let cleanTitle = (event.title || '')
       .replace(/^🔁\s*/, '')
       .replace(/^日延べ\s*/, '')
+      .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
 
     const { error } = await supabase
@@ -206,6 +209,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
 
   const isPostponedUndecided = (event.title || '').includes('日延べ');
+
+  // タイトルから日延べ先の日付・時間を抽出するヘルパー
+  const extractPostponeInfo = (titleStr: string) => {
+    const match = titleStr.match(/\(([^)]+)\)/);
+    return match ? match[1] : null;
+  };
+
+  const postponedInfo = extractPostponeInfo(event.title || '');
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -296,7 +307,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               </div>
 
-              {/* カラー選択（インラインスタイルでカラーコードを反映） */}
+              {/* カラー選択 */}
               <div>
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">カードの色</label>
                 <div className="flex space-x-2">
@@ -333,7 +344,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               </div>
             </form>
           ) : (
-            /* 通常表示時の日時と場所 */
+            /* 通常表示時の日時と場所、および日延べ先の新しい日程・時間 */
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <Calendar size={16} className="text-blue-500 flex-shrink-0" />
@@ -350,6 +361,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   >
                     {event.address}
                   </a>
+                </div>
+              )}
+
+              {/* 住所の下に日延べ先の日付・時間を表示 */}
+              {postponedInfo && (
+                <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
+                  <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
+                  <span>新日程: {postponedInfo}</span>
                 </div>
               )}
             </div>
