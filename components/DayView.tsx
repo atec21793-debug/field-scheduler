@@ -7,8 +7,8 @@ import EventCard from './EventCard';
 interface DayViewProps {
   currentDate: Date;
   events: EventItem[];
-  members: string[];
-  absences: { member: string; date: string; type: string }[];
+  members?: string[];
+  absences?: { member: string; date: string; type: string }[];
   onSelectEvent: (event: EventItem) => void;
   onCellClick: (dateStr: string, timeStr?: string) => void;
 }
@@ -16,8 +16,8 @@ interface DayViewProps {
 export default function DayView({
   currentDate,
   events,
-  members,
-  absences,
+  members = [],
+  absences = [],
   onSelectEvent,
   onCellClick,
 }: DayViewProps) {
