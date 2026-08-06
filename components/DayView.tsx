@@ -48,15 +48,18 @@ export default function DayView({
 
   const parsedEvents = dayEvents.map((event) => {
     const startMin = timeToMinutes(event.start_time);
-    const endMin = event.end_time ? timeToMinutes(event.end_time) : startMin + 30;
+    // 終了時間がある場合はその通りに計算、なければデフォルトで60分（または30分）
+    let endMin = event.end_time ? timeToMinutes(event.end_time) : startMin + 60;
     
-    // 最低でも30分（0.5時間分）の高さは確保しつつ、設定された正確な時間を反映
-    const actualDuration = Math.max(endMin - startMin, 30);
+    // 終了時間が開始時間より前の場合は最低30分を確保
+    if (endMin <= startMin) {
+      endMin = startMin + 30;
+    }
 
     return {
       event,
       startMin,
-      endMin: startMin + actualDuration,
+      endMin,
     };
   });
 
@@ -138,6 +141,7 @@ export default function DayView({
           {positionedEvents.map(({ event, startMin, endMin, colIndex, totalCols }) => {
             const durationMin = endMin - startMin;
             const topPx = (startMin / 60) * HOUR_HEIGHT;
+            // 実際の時間差（分）から高さを正確に計算する
             const heightPx = (durationMin / 60) * HOUR_HEIGHT;
             
             const widthPercent = 100 / totalCols;
