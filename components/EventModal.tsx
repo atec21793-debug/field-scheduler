@@ -152,7 +152,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      // 日付と時間（例: 2026-08-20 09:00 〜 10:00）をタイトルに含める
       const originalTitleWithPostpone = `日延べ (${newPostponeDate} ${newStartTimeStr} 〜 ${newEndTimeStr}) ${cleanTitle}`.trim();
       const { error: updateError } = await supabase
         .from('events')
@@ -210,13 +209,23 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const isPostponedUndecided = (event.title || '').includes('日延べ');
 
-  // タイトルから日延べ先の日付・時間を抽出するヘルパー
-  const extractPostponeInfo = (titleStr: string) => {
-    const match = titleStr.match(/\(([^)]+)\)/);
-    return match ? match[1] : null;
+  // タイトルから日延べ先の日付・時間を抽出して「〇月〇日 00:00〜00:00」形式にフォーマットするヘルパー
+  const formatPostponedInfo = (titleStr: string) => {
+    const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
+    if (match) {
+      const [, , month, day, startTime, endTime] = match;
+      return `${parseInt(month, 10)}月${parseInt(day, 10)}日 ${startTime}～${endTime}`;
+    }
+    // 日付のみの場合
+    const dateMatch = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\)/);
+    if (dateMatch) {
+      const [, , month, day] = dateMatch;
+      return `${parseInt(month, 10)}月${parseInt(day, 10)}日`;
+    }
+    return null;
   };
 
-  const postponedInfo = extractPostponeInfo(event.title || '');
+  const formattedPostpone = formatPostponedInfo(event.title || '');
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -344,7 +353,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               </div>
             </form>
           ) : (
-            /* 通常表示時の日時と場所、および日延べ先の新しい日程・時間 */
+            /* 通常表示時の日時と場所、および日延べ先の新日程表示 */
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <Calendar size={16} className="text-blue-500 flex-shrink-0" />
@@ -364,11 +373,11 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {/* 住所の下に日延べ先の日付・時間を表示 */}
-              {postponedInfo && (
+              {/* 住所の下に「→ 8月6日 09:00～11:30」形式で表示 */}
+              {formattedPostpone && (
                 <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
                   <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
-                  <span>新日程: {postponedInfo}</span>
+                  <span>新日程: {formattedPostpone}</span>
                 </div>
               )}
             </div>
