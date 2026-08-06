@@ -14,6 +14,9 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
   const [date, setDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState(defaultTime);
   
+  // 🈳追加用のチェックボックスの状態
+  const [isVacant, setIsVacant] = useState(false);
+  
   // デフォルトで開始時間の1時間後を終了時間にする
   const getDefaultEndTime = (start: string) => {
     const [h, m] = start.split(':').map(Number);
@@ -51,9 +54,12 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
     e.preventDefault();
     if (!title.trim()) return;
 
+    // チェックが入っていればタイトルの先頭に「🈳」を付与する
+    const finalTitle = isVacant ? `🈳${title}` : title;
+
     const { error } = await supabase.from('events').insert([
       {
-        title,
+        title: finalTitle,
         date,
         time: `${startTime} - ${endTime}`,
         start_time: startTime,
@@ -81,6 +87,20 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">タイトル・現場名</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="例: ○○様邸 現場施工" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+          </div>
+
+          {/* 🈳を付与するチェックボックスを追加 */}
+          <div className="flex items-center space-x-2 pt-1">
+            <input
+              type="checkbox"
+              id="vacant-checkbox"
+              checked={isVacant}
+              onChange={(e) => setIsVacant(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="vacant-checkbox" className="text-xs font-semibold text-gray-600 cursor-pointer">
+              空き枠（🈳）として先頭につける
+            </label>
           </div>
 
           <div>
