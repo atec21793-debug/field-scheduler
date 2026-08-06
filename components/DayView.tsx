@@ -49,54 +49,63 @@ export default function DayView({
   const parsedEvents = dayEvents.map((event) => {
     const startStr = event.start_time || '09:00';
     const startMin = timeToMinutes(startStr);
+    // 終了時間が無い、または不正な場合は開始から60分、あるいは最低30分を確保
     let durationMin = 60;
     if (event.end_time) {
       const endMin = timeToMinutes(event.end_time);
       if (endMin > startMin) {
-        durationMin = Math.max(endMin - startMin, 30);
+        durationMin = endMin - startMin;
       }
     }
+    // 短すぎる場合は視認性のため最低30分にする
+    const actualDuration = Math.max(durationMin, 30);
+
     return {
       event,
       startMin,
-      endMin: startMin + durationMin,
+      endMin: startMin + actualDuration,
     };
   });
 
-  // 重なりグループを計算してカラムに分割するロジック（週表示と共通）
+  // 日表示専用の堅牢な重なり・カラム割り当てロジック
   const positionedEvents = React.useMemo(() => {
-    const sorted = [...parsedEvents].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
-    const groups: (typeof parsedEvents)[number][][] = [];
+    const sorted = [...parsedEvents].sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
+    
+    // イベントグループ（重なり合うものの塊）に分割
+    const clusters: (typeof parsedEvents)[number][][] = [];
 
     sorted.forEach((item) => {
-      let placed = false;
-      for (const group of groups) {
-        const hasOverlap = group.some(
+      let addedToCluster = false;
+      for (const cluster of clusters) {
+        // クラスター内のいずれかのイベントと時間が重複しているか
+        const hasOverlap = cluster.some(
           (other) => item.startMin < other.endMin && item.endMin > other.startMin
         );
-        if (!hasOverlap) {
-          group.push(item);
-          placed = true;
+        if (hasOverlap) {
+          cluster.push(item);
+          addedToCluster = true;
           break;
         }
       }
-      if (!placed) {
-        groups.push([item]);
+      if (!addedToCluster) {
+        clusters.push([item]);
       }
     });
 
     const result: { event: EventItem; startMin: number; endMin: number; colIndex: number; totalCols: number }[] = [];
 
-    parsedEvents.forEach((item) => {
-      // このイベントが含まれる重なりグループを特定
-      const relatedGroup = groups.find((g) => g.some((el) => el.event.id === item.event.id)) || [item];
-      const totalCols = relatedGroup.length;
-      const colIndex = relatedGroup.findIndex((el) => el.event.id === item.event.id);
-
-      result.push({
-        ...item,
-        colIndex: colIndex !== -1 ? colIndex : 0,
-        totalCols: totalCols > 0 ? totalCols : 1,
+    clusters.forEach((cluster) => {
+      // クラスター内の各イベントにカラムを割り当てる
+      // 開始時間が早い順に並べ替え
+      cluster.sort((a, b) => a.startMin - b.startMin || String(a.event.id).localeCompare(String(b.event.id)));
+      
+      const totalCols = cluster.length;
+      cluster.forEach((item, index) => {
+        result.push({
+          ...item,
+          colIndex: index,
+          totalCols: totalCols,
+        });
       });
     });
 
@@ -161,7 +170,7 @@ export default function DayView({
                 key={event.id}
                 style={{
                   top: `${topPx}px`,
-                  height: `${Math.max(heightPx, 20)}px`,
+                  height: `${Math.max(heightPx, 30)}px`,
                   position: 'absolute',
                   left: `${leftPercent}%`,
                   width: `${widthPercent}%`,
