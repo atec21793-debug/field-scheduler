@@ -99,7 +99,7 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <label htmlFor="vacant-checkbox" className="text-xs font-semibold text-gray-600 cursor-pointer">
-              空き枠（🈳）として先頭につける
+              空室
             </label>
           </div>
 
