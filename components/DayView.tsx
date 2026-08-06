@@ -72,23 +72,21 @@ export default function DayView({
     return h * 60 + m;
   };
 
+  // 週表示と同じパース・計算ロジック
   const parsedEvents: ParsedEvent[] = normalEvents.map((event) => {
     const startStr = event.start_time || '09:00';
     const startMin = timeToMinutes(startStr);
-    
-    // 終了時間を正確に計算
-    let endMin = startMin + 60; // デフォルト1時間後
+    let durationMin = 60;
     if (event.end_time) {
-      const parsedEndMin = timeToMinutes(event.end_time);
-      if (parsedEndMin > startMin) {
-        endMin = parsedEndMin;
+      const endMin = timeToMinutes(event.end_time);
+      if (endMin > startMin) {
+        durationMin = Math.max(endMin - startMin, 30);
       }
     }
-
     return {
       event,
       startMin,
-      endMin,
+      endMin: startMin + durationMin,
     };
   });
 
