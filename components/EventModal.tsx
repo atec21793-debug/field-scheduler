@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ShoppingCart } from 'lucide-react';
 
 interface EventModalProps {
-  event: EventItem;
+  event: EventItem & { ordered?: boolean };
   onClose: () => void;
   onUpdate: () => void;
 }
@@ -30,9 +30,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [address, setAddress] = useState(event.address || '');
   const [selectedColor, setSelectedColor] = useState(event.color || '#1e3a8a');
 
-  // --- 追加: 詳細画面ですぐ変更できる重要フラグ (★から始まっているか) ---
+  // 重要フラグ (★から始まっているか)
   const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
-  // -----------------------------------------------------------------
+  
+  // --- ordered カラムの値で管理するステート ---
+  const [isOrdered, setIsOrdered] = useState(event.ordered || false);
+  // ---------------------------------------------
 
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
@@ -44,28 +47,24 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
-  // --- 追加: チェックボックス変更時に即時保存する処理 ---
+  // ヘッダーでの重要フラグの即時変更
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     setIsStarred(checked);
 
-    // 既存のタイトルから余計な★を除去してクリーンにする
     let cleanTitle = (event.title || '').replace(/^★\s*/, '').trim();
     const newTitle = checked ? `★ ${cleanTitle}` : cleanTitle;
 
-    // 即座にSupabaseを更新
     const { error } = await supabase
       .from('events')
       .update({ title: newTitle })
       .eq('id', event.id);
 
     if (!error) {
-      // event.titleのキャッシュや親側の表示を更新するためにonUpdateを呼ぶ
-      event.title = newTitle; // ローカル側も即座に同期
+      event.title = newTitle;
       onUpdate();
     }
   };
-  // ----------------------------------------------------
 
   // 完了にする処理
   const handleToggleComplete = async () => {
@@ -96,12 +95,11 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // 予定自体の基本情報（タイトル、日時、場所、色など）の保存
+  // 予定自体の基本情報の保存
   const handleSaveBasicInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
-    // 編集モードで保存する際も、現在のisStarred状態を維持・反映させる
     let cleanTitle = title.replace(/^★\s*/, '').trim();
     const finalTitle = isStarred ? `★ ${cleanTitle}` : cleanTitle;
 
@@ -116,6 +114,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         time: timeString,
         address,
         color: selectedColor,
+        ordered: isOrdered, // ordered カラムを更新
       })
       .eq('id', event.id);
 
@@ -131,7 +130,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
 
     let cleanTitle = (event.title || '')
-      .replace(/^★\s*/, '') // ★も除去対象に含める
+      .replace(/^★\s*/, '')
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
@@ -178,12 +177,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           time: newTimeString,
           start_time: newStartTimeStr,
           end_time: newEndTimeStr,
-          member: event.member,
           address: event.address,
           color: event.color,
           memo: event.memo,
           report: event.report,
           status: 'active',
+          ordered: isOrdered,
         },
       ]);
 
@@ -241,7 +240,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // メモや日報の自動保存（フォーカスアウト時）
+  // メモや日報の自動保存
   const handleSaveNotes = async () => {
     await supabase
       .from('events')
@@ -253,7 +252,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('('));
 
-  // タイトルから日延べ先の日付・時間を抽出して「〇月〇日 00:00〜00:00」形式にフォーマットするヘルパー
+  // 日延べ先の日付・時間を抽出
   const formatPostponedInfo = (titleStr: string) => {
     const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
     if (match) {
@@ -269,8 +268,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
 
   const formattedPostpone = formatPostponedInfo(event.title || '');
-
-  // 表示用タイトル（★を除外したもの）
   const displayTitle = (event.title || '').replace(/^★\s*/, '');
 
   return (
@@ -282,7 +279,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center space-x-2 truncate flex-1 mr-2">
-            {/* --- 追加: 詳細画面のヘッダーに配置したチェックボックス --- */}
             <label className="flex items-center cursor-pointer select-none flex-shrink-0" title="重要マーク(★)を切り替え">
               <input
                 type="checkbox"
@@ -292,7 +288,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               />
               <span className="ml-1 text-xs font-bold text-amber-600">★</span>
             </label>
-            {/* ---------------------------------------------------- */}
 
             <h2 className="text-lg font-bold text-gray-800 truncate">
               {isEditing ? '予定の編集' : displayTitle}
@@ -334,6 +329,22 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   required
                 />
               </div>
+
+              {/* 商品発注済みチェックボックス */}
+              <div className="flex items-center space-x-2 pt-1 pb-1 bg-white/60 px-2.5 py-1.5 rounded border border-blue-100">
+                <input
+                  id="orderedCheckbox"
+                  type="checkbox"
+                  checked={isOrdered}
+                  onChange={(e) => setIsOrdered(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="orderedCheckbox" className="text-xs font-semibold text-indigo-900 cursor-pointer flex items-center space-x-1">
+                  <ShoppingCart size={14} className="text-indigo-600" />
+                  <span>商品発注済みにする</span>
+                </label>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付</label>
@@ -414,12 +425,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               </div>
             </form>
           ) : (
-            /* 通常表示時の日時と場所、および日延べ先の新日程表示 */
+            /* 通常表示時の日時、場所、商品発注済みラベル、新日程表示 */
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <Calendar size={16} className="text-blue-500 flex-shrink-0" />
                 <span>{event.date} {event.start_time && event.end_time ? `(${event.start_time} 〜 ${event.end_time})` : ''}</span>
               </div>
+              
               {event.address && (
                 <div className="flex items-center space-x-2">
                   <MapPin size={16} className="text-red-500 flex-shrink-0" />
@@ -431,6 +443,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   >
                     {event.address}
                   </a>
+                </div>
+              )}
+
+              {/* 住所の下に「商品発注済み」バッジを表示 */}
+              {isOrdered && (
+                <div className="flex items-center space-x-1.5 pt-0.5">
+                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
+                    <ShoppingCart size={13} className="text-indigo-600" />
+                    <span>商品発注済み</span>
+                  </span>
                 </div>
               )}
 
