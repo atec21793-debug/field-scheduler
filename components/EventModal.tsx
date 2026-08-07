@@ -450,8 +450,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               {isOrdered && (
                 <div className="flex items-center space-x-1.5 pt-0.5">
                   <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
-                    <ShoppingCart size={13} className="text-indigo-600" />
-                    <span>商品発注済み</span>
+                    <span>商品到着済み</span>
                   </span>
                 </div>
               )}
