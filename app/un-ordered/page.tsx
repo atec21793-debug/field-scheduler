@@ -10,14 +10,21 @@ export default function UnOrderedListPage() {
   const [events, setEvents] = useState<(EventItem & { ordered?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 未発注のデータを取得
+  // 未発注のデータを取得（休み、（く）、（工事）などの不要なカードを除外）
   const fetchUnOrderedEvents = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('events')
       .select('*')
-      .or('ordered.is.null,ordered.eq.false') // orderedがfalseまたはnullのものを取得
+      .or('ordered.is.null,ordered.eq.false') // 未発注のもの
+      .not('title', 'ilike', '%🎌%')
+      .not('title', 'ilike', '%（く）%')
+      .not('title', 'ilike', '%(く)%')
+      .not('title', 'ilike', '%（工事）%')
+      .not('title', 'ilike', '%(工事)%')
       .order('date', { ascending: true });
+
+    const { data, error } = await query;
 
     if (!error && data) {
       setEvents(data);
@@ -38,7 +45,7 @@ export default function UnOrderedListPage() {
       .eq('id', id);
 
     if (!error) {
-      // リストから即座に除外（idの型違いを避けるため文字列に統一して比較）
+      // リストから即座に除外
       setEvents((prev) => prev.filter((event) => String(event.id) !== String(id)));
     }
   };
