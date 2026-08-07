@@ -47,7 +47,7 @@ export default function StarredListPage() {
               <ArrowLeft size={20} />
             </Link>
             <h1 className="text-lg font-bold text-gray-800">
-              ★つき予定一覧
+              依頼書ないやつ
             </h1>
           </div>
           <span className="text-xs font-semibold px-3 py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-200">
@@ -60,7 +60,7 @@ export default function StarredListPage() {
           <div className="text-center py-12 text-gray-400 text-sm">読み込み中...</div>
         ) : events.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400 space-y-2">
-            <p className="text-sm font-medium text-gray-400">これ以降、★つきの予定はありません。</p>
+            <p className="text-sm font-medium text-gray-400"></p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -84,10 +84,7 @@ export default function StarredListPage() {
                     </div>
                   </div>
 
-                  {/* 住所表示 */}
-                  <div className="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 max-w-xs truncate">
-                    {event.address ? event.address : <span className="text-gray-400">住所未設定</span>}
-                  </div>
+                  
                 </div>
               );
             })}
