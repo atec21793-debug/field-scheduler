@@ -10,21 +10,22 @@ export default function UnOrderedListPage() {
   const [events, setEvents] = useState<(EventItem & { ordered?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 未発注のデータを取得（休み、（く）、（工事）などの不要なカードを除外）
+  // 未発注のデータを取得（不要なカードの除外条件を含む）
   const fetchUnOrderedEvents = async () => {
     setLoading(true);
     let query = supabase
       .from('events')
       .select('*')
       .or('ordered.is.null,ordered.eq.false') // 未発注のもの
+      .not('title', 'ilike', '%休み%')
       .not('title', 'ilike', '%🎌%')
       .not('title', 'ilike', '%（く）%')
       .not('title', 'ilike', '%(く)%')
       .not('title', 'ilike', '%（工事）%')
       .not('title', 'ilike', '%(工事)%')
-      .not('title', 'ilike', '%(現調)%')
-      .not('title', 'ilike', '%(点検)%')
-   
+      .not('title', 'ilike', '%現調%')
+      .not('title', 'ilike', '%点検%')
+      
       .order('date', { ascending: true });
 
     const { data, error } = await query;
@@ -103,14 +104,15 @@ export default function UnOrderedListPage() {
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                       <div className="flex items-center space-x-1">
-                        <Calendar size={14} className="text-blue-500" />
+                        <Calendar size={14} className="text-blue-500 flex-shrink-0" />
                         <span>{event.date} {event.start_time ? `(${event.start_time})` : ''}</span>
                       </div>
 
+                      {/* 住所表示部分 */}
                       {event.address && (
                         <div className="flex items-center space-x-1">
-                          <MapPin size={14} className="text-red-500" />
-                          <span className="truncate max-w-[200px] sm:max-w-xs">{event.address}</span>
+                          <MapPin size={14} className="text-red-500 flex-shrink-0" />
+                          <span className="text-gray-600 truncate max-w-[220px] sm:max-w-sm">{event.address}</span>
                         </div>
                       )}
                     </div>
