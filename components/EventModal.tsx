@@ -30,6 +30,10 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [address, setAddress] = useState(event.address || '');
   const [selectedColor, setSelectedColor] = useState(event.color || '#1e3a8a');
 
+  // --- 追加: 詳細画面ですぐ変更できる重要フラグ (★から始まっているか) ---
+  const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
+  // -----------------------------------------------------------------
+
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -39,6 +43,29 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('undecided');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
+
+  // --- 追加: チェックボックス変更時に即時保存する処理 ---
+  const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setIsStarred(checked);
+
+    // 既存のタイトルから余計な★を除去してクリーンにする
+    let cleanTitle = (event.title || '').replace(/^★\s*/, '').trim();
+    const newTitle = checked ? `★ ${cleanTitle}` : cleanTitle;
+
+    // 即座にSupabaseを更新
+    const { error } = await supabase
+      .from('events')
+      .update({ title: newTitle })
+      .eq('id', event.id);
+
+    if (!error) {
+      // event.titleのキャッシュや親側の表示を更新するためにonUpdateを呼ぶ
+      event.title = newTitle; // ローカル側も即座に同期
+      onUpdate();
+    }
+  };
+  // ----------------------------------------------------
 
   // 完了にする処理
   const handleToggleComplete = async () => {
@@ -74,11 +101,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
     setIsSaving(true);
 
+    // 編集モードで保存する際も、現在のisStarred状態を維持・反映させる
+    let cleanTitle = title.replace(/^★\s*/, '').trim();
+    const finalTitle = isStarred ? `★ ${cleanTitle}` : cleanTitle;
+
     const timeString = startTime && endTime ? `${startTime} - ${endTime}` : '';
     const { error } = await supabase
       .from('events')
       .update({
-        title,
+        title: finalTitle,
         date,
         start_time: startTime,
         end_time: endTime,
@@ -100,6 +131,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
 
     let cleanTitle = (event.title || '')
+      .replace(/^★\s*/, '') // ★も除去対象に含める
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
@@ -107,7 +139,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .trim();
 
     if (postponeType === 'undecided') {
-      const newTitle = `日延未定 ${cleanTitle}`.trim();
+      let newTitle = `日延未定 ${cleanTitle}`.trim();
+      if (isStarred) newTitle = `★ ${newTitle}`;
+
       const { error } = await supabase
         .from('events')
         .update({ title: newTitle })
@@ -134,7 +168,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
-      const newCardTitle = `🔁 ${cleanTitle}`.trim();
+      let newCardTitle = `🔁 ${cleanTitle}`.trim();
+      if (isStarred) newCardTitle = `★ ${newCardTitle}`;
+
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -153,7 +189,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      const originalTitleWithPostpone = `日延べ (${newPostponeDate} ${newStartTimeStr} 〜 ${newEndTimeStr}) ${cleanTitle}`.trim();
+      let originalTitleWithPostpone = `日延べ (${newPostponeDate} ${newStartTimeStr} 〜 ${newEndTimeStr}) ${cleanTitle}`.trim();
+      if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
+
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -172,11 +210,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   // 日延べ解除の処理
   const handleRemovePostpone = async () => {
     let cleanTitle = (event.title || '')
+      .replace(/^★\s*/, '')
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
+
+    if (isStarred) cleanTitle = `★ ${cleanTitle}`;
 
     const { error } = await supabase
       .from('events')
@@ -219,7 +260,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const [, , month, day, startTime, endTime] = match;
       return `${parseInt(month, 10)}月${parseInt(day, 10)}日 ${startTime}～${endTime}`;
     }
-    // 日付のみの場合
     const dateMatch = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\)/);
     if (dateMatch) {
       const [, , month, day] = dateMatch;
@@ -230,6 +270,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const formattedPostpone = formatPostponedInfo(event.title || '');
 
+  // 表示用タイトル（★を除外したもの）
+  const displayTitle = (event.title || '').replace(/^★\s*/, '');
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
@@ -238,10 +281,25 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-lg font-bold text-gray-800 truncate">
-            {isEditing ? '予定の編集' : event.title}
-          </h2>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2 truncate flex-1 mr-2">
+            {/* --- 追加: 詳細画面のヘッダーに配置したチェックボックス --- */}
+            <label className="flex items-center cursor-pointer select-none flex-shrink-0" title="重要マーク(★)を切り替え">
+              <input
+                type="checkbox"
+                checked={isStarred}
+                onChange={handleStarToggle}
+                className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 cursor-pointer"
+              />
+              <span className="ml-1 text-xs font-bold text-amber-600">★</span>
+            </label>
+            {/* ---------------------------------------------------- */}
+
+            <h2 className="text-lg font-bold text-gray-800 truncate">
+              {isEditing ? '予定の編集' : displayTitle}
+            </h2>
+          </div>
+
+          <div className="flex items-center space-x-1 flex-shrink-0">
             {!isEditing && (
               <button 
                 onClick={() => setIsEditing(true)}
@@ -376,7 +434,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {/* 住所の下に「→ 8月6日 09:00～11:30」形式で表示 */}
+              {/* 住所の下に新日程を表示 */}
               {formattedPostpone && (
                 <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
                   <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
