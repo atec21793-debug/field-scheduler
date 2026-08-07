@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X, ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -59,6 +60,16 @@ export default function CalendarHeader({
             </button>
           )}
         </div>
+
+        {/* ★ 検索バーの横（表示切替タブの前）に未発注リストボタンを配置 */}
+        <Link
+          href="/un-ordered"
+          className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium shadow-sm transition flex-shrink-0"
+          title="未発注リストを開く"
+        >
+          <ShoppingCart size={16} />
+          <span>未発注リスト</span>
+        </Link>
 
         {/* 表示切替タブ */}
         <div className="flex bg-gray-100 p-1 rounded-lg flex-shrink-0">
