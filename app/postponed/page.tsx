@@ -3,14 +3,20 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { EventItem } from '@/app/page';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Edit3, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PostponedListPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 「日延未定」が含まれるデータのみを取得（「日延べ」は対象外）
+  // 編集モーダル用のステート
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  const [newDate, setNewDate] = useState('');
+  const [newStartTime, setNewStartTime] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 「日延未定」が含まれるデータを取得
   const fetchPostponedEvents = async () => {
     setLoading(true);
 
@@ -29,6 +35,39 @@ export default function PostponedListPage() {
   useEffect(() => {
     fetchPostponedEvents();
   }, []);
+
+  // 編集モーダルを開く
+  const handleOpenEdit = (event: EventItem) => {
+    setEditingEvent(event);
+    setNewDate(event.date || '');
+    setNewStartTime(event.start_time || '');
+  };
+
+  // 日程更新の保存処理
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent || !newDate) return;
+
+    setIsSubmitting(true);
+
+    const { error } = await supabase
+      .from('events')
+      .update({
+        date: newDate,
+        start_time: newStartTime || null,
+      })
+      .eq('id', editingEvent.id);
+
+    if (!error) {
+      // 保存成功したら、日付が設定されて「日延未定」でなくなる可能性があるためリストから除外するか再取得する
+      setEvents((prev) => prev.filter((item) => item.id !== editingEvent.id));
+      setEditingEvent(null);
+    } else {
+      alert('更新に失敗しました。');
+    }
+
+    setIsSubmitting(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
@@ -77,15 +116,86 @@ export default function PostponedListPage() {
                   </div>
                 </div>
 
-                {/* 住所表示 */}
-                <div className="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 max-w-xs truncate">
-                  {event.address ? event.address : <span className="text-gray-400">住所未設定</span>}
+                {/* 右側：住所と編集ボタン */}
+                <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 max-w-xs truncate">
+                    {event.address ? event.address : <span className="text-gray-400">住所未設定</span>}
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenEdit(event)}
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold rounded-lg transition border border-blue-200 flex-shrink-0"
+                  >
+                    <Edit3 size={14} />
+                    <span>日程変更</span>
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* 日程編集モーダル */}
+      {editingEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-gray-800">日程の変更</h3>
+              <button 
+                onClick={() => setEditingEvent(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border">
+              <span className="font-bold block text-gray-800 mb-1">{editingEvent.title}</span>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-700">新しい日付</label>
+                <input
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-700">時間（任意）</label>
+                <input
+                  type="time"
+                  value={newStartTime}
+                  onChange={(e) => setNewStartTime(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingEvent(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-sm disabled:opacity-50"
+                >
+                  {isSubmitting ? '保存中...' : '変更を保存'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
