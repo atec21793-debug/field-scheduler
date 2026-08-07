@@ -48,7 +48,6 @@ export default function CalendarHeader({
             className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium shadow-sm transition"
             title="未発注リストを開く"
           >
-            <ShoppingCart size={15} />
             <span>未発注</span>
           </Link>
 
@@ -57,7 +56,7 @@ export default function CalendarHeader({
             className="flex items-center space-x-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium shadow-sm transition"
             title="住所なしリストを開く"
           >
-            <MapPinOff size={15} />
+            
             <span>住所なし</span>
           </Link>
         </div>
