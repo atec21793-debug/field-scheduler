@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Search, X, ShoppingCart, MapPinOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface CalendarHeaderProps {
@@ -41,11 +41,12 @@ export default function CalendarHeader({
       </div>
 
       <div className="flex items-center space-x-3 w-full sm:w-auto justify-end flex-wrap sm:flex-nowrap">
-        {/* ★ 検索バーの左側に「未発注」と「住所なし」のボタンを配置 */}
+        {/* 検索バーの左側に配置した「未発注」と「住所なし」のボタン（薄いグレー） */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           <Link
             href="/un-ordered"
-            className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium shadow-sm transition"
+            style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' }}
+            className="flex items-center space-x-1 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition hover:bg-gray-200"
             title="未発注リストを開く"
           >
             <span>未発注</span>
@@ -53,10 +54,10 @@ export default function CalendarHeader({
 
           <Link
             href="/no-address"
-            className="flex items-center space-x-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium shadow-sm transition"
+            style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' }}
+            className="flex items-center space-x-1 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition hover:bg-gray-200"
             title="住所なしリストを開く"
           >
-            
             <span>住所なし</span>
           </Link>
         </div>
