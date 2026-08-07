@@ -41,7 +41,7 @@ export default function CalendarHeader({
       </div>
 
       <div className="flex items-center space-x-3 w-full sm:w-auto justify-end flex-wrap sm:flex-nowrap">
-        {/* 検索バーの左側に配置した「未発注」と「住所なし」のボタン（薄いグレー） */}
+        {/* 検索バーの左側に配置したボタン群（未発注・住所なし・★つき） */}
         <div className="flex items-center space-x-2 flex-shrink-0">
           <Link
             href="/un-ordered"
@@ -58,7 +58,16 @@ export default function CalendarHeader({
             className="flex items-center space-x-1 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition hover:bg-gray-200"
             title="住所なしリストを開く"
           >
-            <span>住所なし</span>
+            <span>住所</span>
+          </Link>
+
+          <Link
+            href="/starred"
+            style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' }}
+            className="flex items-center space-x-1 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition hover:bg-gray-200"
+            title="★つき予定一覧を開く"
+          >
+            <span>依頼書</span>
           </Link>
         </div>
 
