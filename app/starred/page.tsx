@@ -33,6 +33,23 @@ export default function StarredListPage() {
     fetchStarredEvents();
   }, []);
 
+  // ★のトグル（クリックされたら★を外し、リストから除外する）
+  const handleToggleStar = async (event: EventItem) => {
+    const rawTitle = event.title || '';
+    // 先頭の「★」や「★ 」を取り除く
+    const newTitle = rawTitle.replace(/^★\s*/, '');
+
+    const { error } = await supabase
+      .from('events')
+      .update({ title: newTitle })
+      .eq('id', event.id);
+
+    if (!error) {
+      // 成功したら画面上のリストからも即座に除外する
+      setEvents((prev) => prev.filter((item) => item.id !== event.id));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -60,7 +77,7 @@ export default function StarredListPage() {
           <div className="text-center py-12 text-gray-400 text-sm">読み込み中...</div>
         ) : events.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400 space-y-2">
-            <p className="text-sm font-medium text-gray-400"></p>
+            <p className="text-sm font-medium text-gray-400">現在、対象の予定はありません。</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -74,7 +91,14 @@ export default function StarredListPage() {
                 >
                   <div className="space-y-1.5 flex-1">
                     <div className="flex items-center space-x-2">
-                      <span className="text-amber-500 font-bold text-xs">★</span>
+                      {/* ★をクリックすると外れてリストから消える */}
+                      <button
+                        onClick={() => handleToggleStar(event)}
+                        className="text-amber-500 hover:text-amber-600 hover:scale-110 transition p-1"
+                        title="クリックして★を外す"
+                      >
+                        <span className="font-bold text-base">★</span>
+                      </button>
                       <h2 className="text-sm font-bold text-gray-800">{displayTitle}</h2>
                     </div>
 
@@ -83,8 +107,6 @@ export default function StarredListPage() {
                       <span>{event.date} {event.start_time ? `(${event.start_time})` : ''}</span>
                     </div>
                   </div>
-
-                  
                 </div>
               );
             })}
