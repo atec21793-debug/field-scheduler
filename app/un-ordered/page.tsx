@@ -23,6 +23,8 @@ export default function UnOrderedListPage() {
       .not('title', 'ilike', '%（工事）%')
       .not('title', 'ilike', '%(工事)%')
       .not('title', 'ilike', '%(現調)%')
+      .not('title', 'ilike', '%(点検)%')
+   
       .order('date', { ascending: true });
 
     const { data, error } = await query;
