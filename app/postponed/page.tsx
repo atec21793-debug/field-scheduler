@@ -10,16 +10,13 @@ export default function PostponedListPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // タイトルに「日延」が含まれるデータを取得
+  // 「日延未定」が含まれるデータのみを取得（「日延べ」は対象外）
   const fetchPostponedEvents = async () => {
     setLoading(true);
-
-    const todayStr = new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabase
       .from('events')
       .select('*')
-      .gte('date', todayStr)
       .ilike('title', '%日延未定%')
       .order('date', { ascending: true });
 
