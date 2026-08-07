@@ -26,14 +26,7 @@ export default function NoAddressListPage() {
       .gte('date', todayStr) // 今日以降の予定に限定
       .not('title', 'ilike', '%休み%')
       .not('title', 'ilike', '%🎌%')
-      .not('title', 'ilike', '%（く）%')
-      .not('title', 'ilike', '%(く)%')
-      .not('title', 'ilike', '%（工事）%')
-      .not('title', 'ilike', '%(工事)%')
-      .not('title', 'ilike', '%（現調）%')
-      .not('title', 'ilike', '%(現調)%')
-      .not('title', 'ilike', '%（点検）%')
-      .not('title', 'ilike', '%(点検)%')
+      
       .order('date', { ascending: true });
 
     const { data, error } = await query;
