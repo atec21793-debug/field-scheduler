@@ -188,18 +188,20 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         <div className="w-8 flex-shrink-0 border-r border-gray-200" />
         <div className="grid grid-cols-7 flex-1 divide-x divide-gray-200">
           {weekDays.map((date, index) => {
-            const dateStr = formatDateStr(date);
-            const dayEvents = events.filter((ev) => ev.date === dateStr);
+            const headerDateStr = formatDateStr(date);
+            const dayEvents = events.filter((ev) => ev.date === headerDateStr);
             const holidayEvents = dayEvents.filter(
               (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
             );
-            const isToday = new Date().toDateString() === date.toDateString();
+            
+            const todayStr = formatDateStr(new Date());
+            const isToday = headerDateStr === todayStr;
 
             return (
               <div 
                 key={index} 
                 className="flex flex-col items-center py-2 px-1 cursor-pointer hover:bg-gray-100 transition"
-                onClick={() => handleHeaderClick(dateStr)}
+                onClick={() => handleHeaderClick(headerDateStr)}
                 title="クリックして休みを追加"
               >
                 <span>{weekDayNames[index]}</span>
