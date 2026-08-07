@@ -67,7 +67,6 @@ export default function CalendarHeader({
           className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium shadow-sm transition flex-shrink-0"
           title="未発注リストを開く"
         >
-          <ShoppingCart size={16} />
           <span>未発注リスト</span>
         </Link>
 

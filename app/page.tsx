@@ -88,20 +88,7 @@ export default function Home() {
         setSearchQuery={setSearchQuery}
       />
 
-      {/* 検索窓の横（または検索バーエリア）に未発注リストボタンを配置 */}
-      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2 w-full max-w-md">
-          {/* CalendarHeader内部にある検索窓と並びを合わせるためのスペース調整など */}
-        </div>
-        <Link
-          href="/un-ordered"
-          className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex-shrink-0"
-          title="未発注リストを開く"
-        >
-          
-          <span>未発注リスト</span>
-        </Link>
-      </div>
+      
 
       {/* 検索キーワード入力時のみ一覧を表示するエリア */}
       {searchQuery.trim() !== '' && (
