@@ -8,13 +8,13 @@ import WeekView from '@/components/WeekView';
 import DayView from '@/components/DayView';
 import EventModal from '@/components/EventModal';
 import EventFormModal from '@/components/EventFormModal';
-import { Search } from 'lucide-react';
+import Link from 'next/link';
+import { ShoppingCart } from 'lucide-react';
 
 export type EventItem = {
   id: number;
   date: string;
   title: string;
-  member: string | null;
   status: string;
   inserted_at: string;
   time: string | null;
@@ -24,6 +24,7 @@ export type EventItem = {
   color: string | null;
   memo?: string | null;
   report?: string | null;
+  ordered?: boolean; // memberを削除し、orderedを追加
 };
 
 export default function Home() {
@@ -87,6 +88,21 @@ export default function Home() {
         setSearchQuery={setSearchQuery}
       />
 
+      {/* 検索窓の横（または検索バーエリア）に未発注リストボタンを配置 */}
+      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center space-x-2 w-full max-w-md">
+          {/* CalendarHeader内部にある検索窓と並びを合わせるためのスペース調整など */}
+        </div>
+        <Link
+          href="/un-ordered"
+          className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex-shrink-0"
+          title="未発注リストを開く"
+        >
+          <ShoppingCart size={15} />
+          <span>未発注リスト</span>
+        </Link>
+      </div>
+
       {/* 検索キーワード入力時のみ一覧を表示するエリア */}
       {searchQuery.trim() !== '' && (
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 max-h-48 overflow-y-auto">
@@ -113,9 +129,9 @@ export default function Home() {
                     )}
                     <span className="font-bold text-blue-600">{ev.title}</span>
                   </div>
-                  {ev.member && (
-                    <span className="text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                      担当: {ev.member}
+                  {ev.ordered && (
+                    <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-medium">
+                      発注済み
                     </span>
                   )}
                 </div>
