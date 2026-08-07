@@ -20,7 +20,7 @@ export default function PostponedListPage() {
       .from('events')
       .select('*')
       .gte('date', todayStr)
-      .ilike('title', '%日延%')
+      .ilike('title', '%日延未定%')
       .order('date', { ascending: true });
 
     if (!error && data) {
