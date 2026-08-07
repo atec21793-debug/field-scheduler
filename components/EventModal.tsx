@@ -341,7 +341,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 />
                 <label htmlFor="orderedCheckbox" className="text-xs font-semibold text-indigo-900 cursor-pointer flex items-center space-x-1">
                   <ShoppingCart size={14} className="text-indigo-600" />
-                  <span>商品発注済みにする</span>
+                  <span>商品発注済み・支給</span>
                 </label>
               </div>
 
