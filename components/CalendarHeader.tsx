@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Search, X, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X, ShoppingCart, MapPinOff } from 'lucide-react';
 import Link from 'next/link';
 
 interface CalendarHeaderProps {
@@ -40,7 +40,28 @@ export default function CalendarHeader({
         </div>
       </div>
 
-      <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+      <div className="flex items-center space-x-3 w-full sm:w-auto justify-end flex-wrap sm:flex-nowrap">
+        {/* ★ 検索バーの左側に「未発注」と「住所なし」のボタンを配置 */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <Link
+            href="/un-ordered"
+            className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium shadow-sm transition"
+            title="未発注リストを開く"
+          >
+            <ShoppingCart size={15} />
+            <span>未発注</span>
+          </Link>
+
+          <Link
+            href="/no-address"
+            className="flex items-center space-x-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium shadow-sm transition"
+            title="住所なしリストを開く"
+          >
+            <MapPinOff size={15} />
+            <span>住所なし</span>
+          </Link>
+        </div>
+
         {/* 検索入力欄 */}
         <div className="relative flex-1 sm:w-64">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -60,15 +81,6 @@ export default function CalendarHeader({
             </button>
           )}
         </div>
-
-        {/* ★ 検索バーの横（表示切替タブの前）に未発注リストボタンを配置 */}
-        <Link
-          href="/un-ordered"
-          className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium shadow-sm transition flex-shrink-0"
-          title="未発注リストを開く"
-        >
-          <span>未発注リスト</span>
-        </Link>
 
         {/* 表示切替タブ */}
         <div className="flex bg-gray-100 p-1 rounded-lg flex-shrink-0">
