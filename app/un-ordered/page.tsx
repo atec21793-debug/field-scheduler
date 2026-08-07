@@ -68,7 +68,6 @@ export default function UnOrderedListPage() {
               <ArrowLeft size={20} />
             </Link>
             <h1 className="text-lg font-bold text-gray-800 flex items-center space-x-2">
-              <ShoppingCart className="text-indigo-600" size={20} />
               <span>未発注リスト</span>
             </h1>
           </div>
@@ -82,8 +81,7 @@ export default function UnOrderedListPage() {
           <div className="text-center py-12 text-gray-400 text-sm">読み込み中...</div>
         ) : events.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400 space-y-2">
-            <ShoppingCart size={32} className="mx-auto text-gray-300" />
-            <p className="text-sm font-medium">未発注の予定はありません。すばらしい！</p>
+            <p className="text-sm font-medium">未発注の予定はありません。</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -123,7 +121,6 @@ export default function UnOrderedListPage() {
                     onClick={() => handleToggleOrdered(event.id, event.ordered || false)}
                     className="w-full sm:w-auto flex items-center justify-center space-x-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold transition flex-shrink-0"
                   >
-                    <ShoppingCart size={14} />
                     <span>発注済みにする</span>
                   </button>
                 </div>
