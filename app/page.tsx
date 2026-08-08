@@ -173,6 +173,24 @@ export default function Home() {
         </div>
       )}
 
+      {/* サブヘッダーバー（CalendarHeaderのすぐ下、メインカレンダーの上） */}
+      {!isSidebarOpen && (
+        <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center shadow-xs">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded shadow-sm text-xs flex items-center space-x-2 transition"
+            title="未定リストを開く"
+          >
+            <span>未定リストを開く ＞</span>
+            {totalUnscheduledCount > 0 && (
+              <span className="bg-white text-blue-700 px-1.5 py-0.2 rounded-full text-[10px]">
+                {totalUnscheduledCount}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* メインエリア（サイドバー ＋ カレンダー） */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* 未定・日延未定カード置き場（折りたたみ可能なサイドバー） */}
@@ -283,48 +301,28 @@ export default function Home() {
 
         {/* カレンダー本体 */}
         <div 
-          className="flex-1 overflow-auto flex flex-col relative"
+          className="flex-1 overflow-auto"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
           }}
         >
-          {/* 日付エリアのすぐ下（カレンダー内部の最上部）に配置する大きめのタブ */}
-          {!isSidebarOpen && (
-            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200 px-3 py-1.5 flex items-center shadow-sm">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded shadow text-xs flex items-center space-x-2 transition"
-                title="未定・日延未定リストを開く"
-              >
-                <span>未定リストを開く ＞</span>
-                {totalUnscheduledCount > 0 && (
-                  <span className="bg-white text-blue-700 px-1.5 py-0.5 rounded-full text-[10px]">
-                    {totalUnscheduledCount}
-                  </span>
-                )}
-              </button>
-            </div>
+          {viewMode === 'month' && (
+            <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
           )}
-
-          <div className="flex-1 overflow-auto">
-            {viewMode === 'month' && (
-              <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
-            )}
-            {viewMode === 'week' && (
-              <WeekView 
-                currentDate={currentDate} 
-                events={events} 
-                onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
-                onCellClick={handleCellClick} 
-                onUpdate={fetchEvents}
-                onNavigate={(dir) => handleNavigate(dir)} 
-              />
-            )}
-            {viewMode === 'day' && (
-              <DayView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
-            )}
-          </div>
+          {viewMode === 'week' && (
+            <WeekView 
+              currentDate={currentDate} 
+              events={events} 
+              onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
+              onCellClick={handleCellClick} 
+              onUpdate={fetchEvents}
+              onNavigate={(dir) => handleNavigate(dir)} 
+            />
+          )}
+          {viewMode === 'day' && (
+            <DayView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
+          )}
         </div>
       </div>
 
