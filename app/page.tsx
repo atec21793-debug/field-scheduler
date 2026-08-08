@@ -35,6 +35,9 @@ export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // サイドバーの開閉状態（デフォルトは非表示: false）
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [targetDateForCreate, setTargetDateForCreate] = useState<string>('');
   const [targetTimeForCreate, setTargetTimeForCreate] = useState<string>('09:00');
@@ -82,7 +85,6 @@ export default function Home() {
     const eventId = Number(eventIdStr);
     if (!eventId) return;
 
-    // Supabaseの該当イベントの日付・時間を更新（必要に応じてステータスも通常に戻す）
     const { error } = await supabase
       .from('events')
       .update({ 
@@ -100,20 +102,35 @@ export default function Home() {
   };
 
   // 日付が未定（null）のものを抽出
-  // ※ 「日延未定」の判定条件は既存のデータに合わせて調整してください（例: status === 'postponed' または titleに「日延べ」が含まれる等）
   const unscheduledEvents = events.filter((ev) => !ev.date && ev.status !== 'postponed' && !ev.title.includes('日延べ'));
   const postponedEvents = events.filter((ev) => !ev.date && (ev.status === 'postponed' || ev.title.includes('日延べ')));
 
   return (
-    <main className="flex flex-col h-screen bg-white">
-      <CalendarHeader
-        currentDate={currentDate}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        onNavigate={handleNavigate}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
+    <main className="flex flex-col h-screen bg-white relative">
+      {/* ヘッダー部分にサイドバー開閉ボタンを追加 */}
+      <div className="flex items-center border-b border-gray-200 px-2 bg-white">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 mr-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition flex items-center space-x-1 text-xs font-semibold"
+          title={isSidebarOpen ? "サイドバーを隠す" : "未定リストを開く"}
+        >
+          <span className="hidden sm:inline">未定リスト</span>
+          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded-full text-[10px] ml-1">
+            {unscheduledEvents.length + postponedEvents.length}
+          </span>
+        </button>
+
+        <div className="flex-1">
+          <CalendarHeader
+            currentDate={currentDate}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            onNavigate={handleNavigate}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        </div>
+      </div>
 
       {/* 検索キーワード入力時のみ一覧を表示するエリア */}
       {searchQuery.trim() !== '' && (
@@ -154,17 +171,32 @@ export default function Home() {
       )}
 
       {/* メインエリア（サイドバー ＋ カレンダー） */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* 未定・日延未定カード置き場（サイドバー） */}
-        <aside className="w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-6">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* 未定・日延未定カード置き場（折りたたみ可能なサイドバー） */}
+        <aside 
+          className={`absolute inset-y-0 left-0 z-30 w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-6 shadow-xl transition-transform duration-300 ease-in-out ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:relative md:translate-x-0 ${isSidebarOpen ? 'md:flex' : 'md:hidden'}`}
+        >
           {/* 未定リスト */}
           <div>
-            <h3 className="text-xs font-bold text-gray-600 mb-2 flex items-center justify-between">
-              <span>📌 未定リスト</span>
-              <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">
-                {unscheduledEvents.length}
-              </span>
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-bold text-gray-600 flex items-center space-x-1">
+                <span>未定リスト</span>
+                <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">
+                  {unscheduledEvents.length}
+                </span>
+              </h3>
+              <button
+                onClick={() => {
+                  setTargetDateForCreate(''); // 日付なし（未定）で作成
+                  setIsCreateModalOpen(true);
+                }}
+                className="px-2 py-1 bg-blue-600 text-white text-[10px] font-semibold rounded hover:bg-blue-700 transition"
+              >
+                ＋ 新規作成
+              </button>
+            </div>
             <div className="space-y-2">
               {unscheduledEvents.map((ev) => (
                 <div
@@ -192,7 +224,7 @@ export default function Home() {
           {/* 日延未定リスト */}
           <div>
             <h3 className="text-xs font-bold text-amber-600 mb-2 flex items-center justify-between">
-              <span>⏳ 日延未定リスト</span>
+              <span>日延未定リスト</span>
               <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">
                 {postponedEvents.length}
               </span>
@@ -228,8 +260,6 @@ export default function Home() {
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
-            const eventId = e.dataTransfer.getData('text/plain');
-            // セル以外にドロップされた場合は、現在表示されている週/日の最初の日にデフォルトで配置するなど調整可能です
           }}
         >
           {viewMode === 'month' && (
