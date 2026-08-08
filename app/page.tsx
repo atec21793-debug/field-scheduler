@@ -13,7 +13,7 @@ import { ShoppingCart } from 'lucide-react';
 
 export type EventItem = {
   id: number;
-  date: string;
+  date: string | null;
   title: string;
   status: string;
   inserted_at: string;
@@ -24,7 +24,7 @@ export type EventItem = {
   color: string | null;
   memo?: string | null;
   report?: string | null;
-  ordered?: boolean; // memberを削除し、orderedを追加
+  ordered?: boolean;
 };
 
 export default function Home() {
@@ -77,6 +77,33 @@ export default function Home() {
     setIsCreateModalOpen(true);
   };
 
+  // ドラッグ＆ドロップでカレンダーにドロップされた時の処理
+  const handleDropToCalendar = async (dateStr: string, timeStr: string = '09:00', eventIdStr: string) => {
+    const eventId = Number(eventIdStr);
+    if (!eventId) return;
+
+    // Supabaseの該当イベントの日付・時間を更新（必要に応じてステータスも通常に戻す）
+    const { error } = await supabase
+      .from('events')
+      .update({ 
+        date: dateStr,
+        start_time: timeStr,
+        status: 'scheduled' 
+      })
+      .eq('id', eventId);
+
+    if (error) {
+      console.error('Error updating event date:', error);
+    } else {
+      fetchEvents();
+    }
+  };
+
+  // 日付が未定（null）のものを抽出
+  // ※ 「日延未定」の判定条件は既存のデータに合わせて調整してください（例: status === 'postponed' または titleに「日延べ」が含まれる等）
+  const unscheduledEvents = events.filter((ev) => !ev.date && ev.status !== 'postponed' && !ev.title.includes('日延べ'));
+  const postponedEvents = events.filter((ev) => !ev.date && (ev.status === 'postponed' || ev.title.includes('日延べ')));
+
   return (
     <main className="flex flex-col h-screen bg-white">
       <CalendarHeader
@@ -87,8 +114,6 @@ export default function Home() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
-
-      
 
       {/* 検索キーワード入力時のみ一覧を表示するエリア */}
       {searchQuery.trim() !== '' && (
@@ -110,7 +135,7 @@ export default function Home() {
                   className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 text-xs shadow-sm cursor-pointer hover:bg-blue-50 transition"
                 >
                   <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-gray-700">{ev.date}</span>
+                    <span className="font-semibold text-gray-700">{ev.date || '未定'}</span>
                     {ev.start_time && (
                       <span className="text-gray-500">{ev.start_time}〜</span>
                     )}
@@ -128,23 +153,102 @@ export default function Home() {
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
-        {viewMode === 'month' && (
-          <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
-        )}
-        {viewMode === 'week' && (
-          <WeekView 
-            currentDate={currentDate} 
-            events={events} 
-            onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
-            onCellClick={handleCellClick} 
-            onUpdate={fetchEvents}
-            onNavigate={(dir) => handleNavigate(dir)} 
-          />
-        )}
-        {viewMode === 'day' && (
-          <DayView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
-        )}
+      {/* メインエリア（サイドバー ＋ カレンダー） */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 未定・日延未定カード置き場（サイドバー） */}
+        <aside className="w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-6">
+          {/* 未定リスト */}
+          <div>
+            <h3 className="text-xs font-bold text-gray-600 mb-2 flex items-center justify-between">
+              <span>📌 未定リスト</span>
+              <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">
+                {unscheduledEvents.length}
+              </span>
+            </h3>
+            <div className="space-y-2">
+              {unscheduledEvents.map((ev) => (
+                <div
+                  key={ev.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', ev.id.toString());
+                  }}
+                  onClick={() => {
+                    setSelectedEvent(ev);
+                    setIsModalOpen(true);
+                  }}
+                  className="bg-white p-2.5 rounded border border-gray-200 text-xs shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition"
+                >
+                  <div className="font-bold text-gray-800">{ev.title}</div>
+                  {ev.address && <div className="text-gray-500 text-[10px] truncate mt-1">{ev.address}</div>}
+                </div>
+              ))}
+              {unscheduledEvents.length === 0 && (
+                <div className="text-[11px] text-gray-400 text-center py-2">未定の案件はありません</div>
+              )}
+            </div>
+          </div>
+
+          {/* 日延未定リスト */}
+          <div>
+            <h3 className="text-xs font-bold text-amber-600 mb-2 flex items-center justify-between">
+              <span>⏳ 日延未定リスト</span>
+              <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">
+                {postponedEvents.length}
+              </span>
+            </h3>
+            <div className="space-y-2">
+              {postponedEvents.map((ev) => (
+                <div
+                  key={ev.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', ev.id.toString());
+                  }}
+                  onClick={() => {
+                    setSelectedEvent(ev);
+                    setIsModalOpen(true);
+                  }}
+                  className="bg-white p-2.5 rounded border border-amber-200 text-xs shadow-sm cursor-grab active:cursor-grabbing hover:border-amber-400 transition"
+                >
+                  <div className="font-bold text-gray-800">{ev.title}</div>
+                  {ev.address && <div className="text-gray-500 text-[10px] truncate mt-1">{ev.address}</div>}
+                </div>
+              ))}
+              {postponedEvents.length === 0 && (
+                <div className="text-[11px] text-gray-400 text-center py-2">日延未定の案件はありません</div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        {/* カレンダー本体 */}
+        <div 
+          className="flex-1 overflow-auto"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const eventId = e.dataTransfer.getData('text/plain');
+            // セル以外にドロップされた場合は、現在表示されている週/日の最初の日にデフォルトで配置するなど調整可能です
+          }}
+        >
+          {viewMode === 'month' && (
+            <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
+          )}
+          {viewMode === 'week' && (
+            <WeekView 
+              currentDate={currentDate} 
+              events={events} 
+              onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} 
+              onCellClick={handleCellClick} 
+              onUpdate={fetchEvents}
+              onNavigate={(dir) => handleNavigate(dir)} 
+            />
+          )}
+          {viewMode === 'day' && (
+            <DayView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
+          )}
+        </div>
       </div>
 
       {isModalOpen && selectedEvent && (

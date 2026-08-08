@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { EventItem } from '@/app/page';
-import { ArrowLeft, Calendar, Edit3, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Edit3, X, GripVertical } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PostponedListPage() {
@@ -16,7 +16,7 @@ export default function PostponedListPage() {
   const [newStartTime, setNewStartTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 「日延未定」が含まれるデータを取得
+  // 「日延未定」かつ日付が未設定（または条件に合う）データを取得
   const fetchPostponedEvents = async () => {
     setLoading(true);
 
@@ -24,10 +24,12 @@ export default function PostponedListPage() {
       .from('events')
       .select('*')
       .ilike('title', '%日延未定%')
-      .order('date', { ascending: true });
+      .order('inserted_at', { ascending: false });
 
     if (!error && data) {
-      setEvents(data);
+      // 日付が空、またはステータスが日延未定のものを抽出
+      const filtered = data.filter((item) => !item.date || item.status === 'postponed' || item.title.includes('日延未定'));
+      setEvents(filtered);
     }
     setLoading(false);
   };
@@ -55,11 +57,11 @@ export default function PostponedListPage() {
       .update({
         date: newDate,
         start_time: newStartTime || null,
+        status: 'scheduled', // 通常ステータスに戻す
       })
       .eq('id', editingEvent.id);
 
     if (!error) {
-      // 保存成功したら、日付が設定されて「日延未定」でなくなる可能性があるためリストから除外するか再取得する
       setEvents((prev) => prev.filter((item) => item.id !== editingEvent.id));
       setEditingEvent(null);
     } else {
@@ -83,12 +85,16 @@ export default function PostponedListPage() {
               <ArrowLeft size={20} />
             </Link>
             <h1 className="text-lg font-bold text-gray-800">
-              日延未定
+              日延未定一覧
             </h1>
           </div>
           <span className="text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-700 rounded-full border border-gray-200">
             合計: {events.length}件
           </span>
+        </div>
+
+        <div className="text-xs text-gray-500 bg-amber-50 border border-amber-200 p-3 rounded-lg">
+          💡 カードをドラッグするか、「日程変更」ボタンからカレンダーに再配置できます。
         </div>
 
         {/* コンテンツリスト */}
@@ -103,16 +109,25 @@ export default function PostponedListPage() {
             {events.map((event) => (
               <div 
                 key={event.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-md transition"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', event.id.toString());
+                }}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-grab active:cursor-grabbing hover:border-amber-400 transition"
               >
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center space-x-2">
-                    <h2 className="text-sm font-bold text-gray-800">{event.title}</h2>
+                <div className="flex items-center space-x-3 flex-1">
+                  <div className="text-gray-400">
+                    <GripVertical size={18} />
                   </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-sm font-bold text-gray-800">{event.title}</h2>
+                    </div>
 
-                  <div className="flex items-center space-x-1 text-xs text-gray-500 font-medium">
-                    <Calendar size={14} className="text-blue-500 flex-shrink-0" />
-                    <span>{event.date} {event.start_time ? `(${event.start_time})` : ''}</span>
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 font-medium">
+                      <Calendar size={14} className="text-amber-500 flex-shrink-0" />
+                      <span>{event.date ? event.date : '日時未定'} {event.start_time ? `(${event.start_time})` : ''}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -123,8 +138,11 @@ export default function PostponedListPage() {
                   </div>
 
                   <button
-                    onClick={() => handleOpenEdit(event)}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold rounded-lg transition border border-blue-200 flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation(); // ドラッグイベントの誤発動を防ぐ
+                      handleOpenEdit(event);
+                    }}
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold rounded-lg transition border border-amber-200 flex-shrink-0"
                   >
                     <Edit3 size={14} />
                     <span>日程変更</span>
