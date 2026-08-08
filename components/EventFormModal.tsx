@@ -11,20 +11,22 @@ interface EventFormModalProps {
 
 export default function EventFormModal({ defaultDate, defaultTime, onClose, onCreated }: EventFormModalProps) {
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(defaultDate);
-  const [startTime, setStartTime] = useState(defaultTime);
+  // defaultDate が空文字の場合を考慮
+  const [date, setDate] = useState(defaultDate || '');
+  const [startTime, setStartTime] = useState(defaultTime || '09:00');
   
   // 🈳追加用のチェックボックスの状態
   const [isVacant, setIsVacant] = useState(false);
   
   // デフォルトで開始時間の1時間後を終了時間にする
   const getDefaultEndTime = (start: string) => {
+    if (!start) return '10:00';
     const [h, m] = start.split(':').map(Number);
     const endH = (h + 1) % 24;
     return `${endH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  const [endTime, setEndTime] = useState(getDefaultEndTime(defaultTime));
+  const [endTime, setEndTime] = useState(getDefaultEndTime(defaultTime || '09:00'));
   const [address, setAddress] = useState('');
   
   // 指定された6色: グレー、赤、濃い青、水色、黄色、紫（デフォルトはグレー）
@@ -60,10 +62,11 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
     const { error } = await supabase.from('events').insert([
       {
         title: finalTitle,
-        date,
-        time: `${startTime} - ${endTime}`,
-        start_time: startTime,
-        end_time: endTime,
+        // 日付が空欄の場合は null を保存して「未定リスト」に直行させる
+        date: date ? date : null,
+        time: startTime && endTime ? `${startTime} - ${endTime}` : null,
+        start_time: startTime || null,
+        end_time: endTime || null,
         address,
         color,
         status: 'active',
@@ -73,6 +76,8 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
     if (!error) {
       onCreated();
       onClose();
+    } else {
+      console.error('Error inserting event:', error);
     }
   };
 
@@ -81,7 +86,7 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800">新規現場予定の登録</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-gray-500"><X size={20} /></button>
+          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-gray-500"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
@@ -104,8 +109,24 @@ export default function EventFormModal({ defaultDate, defaultTime, onClose, onCr
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">予定日</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-600">予定日（未定にする場合は空欄のままでOK）</label>
+              {date && (
+                <button 
+                  type="button" 
+                  onClick={() => setDate('')} 
+                  className="text-[10px] text-blue-600 hover:underline"
+                >
+                  日付をクリア
+                </button>
+              )}
+            </div>
+            <input 
+              type="date" 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)} 
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white" 
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
