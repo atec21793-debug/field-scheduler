@@ -80,22 +80,34 @@ export default function Home() {
     setIsCreateModalOpen(true);
   };
 
-  // ドラッグ＆ドロップでカレンダーにドロップされた時の処理
-  const handleDropToCalendar = async (dateStr: string, timeStr: string = '09:00', eventIdStr: string) => {
+  // カレンダーからサイドバー（未定リスト / 日延未定リスト）へドロップされた時の処理
+  const handleDropToSidebar = async (e: React.DragEvent, targetStatus: 'unscheduled' | 'postponed') => {
+    e.preventDefault();
+    const eventIdStr = e.dataTransfer.getData('text/plain');
     const eventId = Number(eventIdStr);
     if (!eventId) return;
 
+    // 日付と時間をクリアし、必要に応じてステータスを更新
+    const updateData: any = {
+      date: null,
+      start_time: null,
+      end_time: null,
+      time: null,
+    };
+
+    if (targetStatus === 'postponed') {
+      updateData.status = 'postponed';
+    } else {
+      updateData.status = 'active';
+    }
+
     const { error } = await supabase
       .from('events')
-      .update({ 
-        date: dateStr,
-        start_time: timeStr,
-        status: 'scheduled' 
-      })
+      .update(updateData)
       .eq('id', eventId);
 
     if (error) {
-      console.error('Error updating event date:', error);
+      console.error('Error moving event to sidebar:', error);
     } else {
       fetchEvents();
     }
@@ -178,8 +190,12 @@ export default function Home() {
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } md:relative md:translate-x-0 ${isSidebarOpen ? 'md:flex' : 'md:hidden'}`}
         >
-          {/* 未定リスト */}
-          <div>
+          {/* 未定リスト（ドロップエリア対応） */}
+          <div 
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDropToSidebar(e, 'unscheduled')}
+            className="min-h-[120px] rounded-lg p-1 transition"
+          >
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-bold text-gray-600 flex items-center space-x-1">
                 <span>未定リスト</span>
@@ -216,13 +232,19 @@ export default function Home() {
                 </div>
               ))}
               {unscheduledEvents.length === 0 && (
-                <div className="text-[11px] text-gray-400 text-center py-2">未定の案件はありません</div>
+                <div className="text-[11px] text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded">
+                  ここにドロップして未定に戻す
+                </div>
               )}
             </div>
           </div>
 
-          {/* 日延未定リスト */}
-          <div>
+          {/* 日延未定リスト（ドロップエリア対応） */}
+          <div 
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDropToSidebar(e, 'postponed')}
+            className="min-h-[120px] rounded-lg p-1 transition"
+          >
             <h3 className="text-xs font-bold text-amber-600 mb-2 flex items-center justify-between">
               <span>日延未定リスト</span>
               <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">
@@ -248,7 +270,9 @@ export default function Home() {
                 </div>
               ))}
               {postponedEvents.length === 0 && (
-                <div className="text-[11px] text-gray-400 text-center py-2">日延未定の案件はありません</div>
+                <div className="text-[11px] text-gray-400 text-center py-4 border border-dashed border-amber-200 rounded">
+                  ここにドロップして日延未定に戻す
+                </div>
               )}
             </div>
           </div>
