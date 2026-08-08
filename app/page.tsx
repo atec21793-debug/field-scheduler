@@ -289,16 +289,16 @@ export default function Home() {
             e.preventDefault();
           }}
         >
-          {/* 0時の行の高さ（約 top-12 あたり、曜日表示の下かつ0時の列の左端）に配置する「＞」タブ */}
+          {/* 「0」の数字のあたり（top-20付近）に配置する白い「＞」タブ */}
           {!isSidebarOpen && (
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="absolute left-0 top-12 z-20 bg-blue-600 hover:bg-blue-700 text-white font-bold px-2 py-3 rounded-r-lg shadow-md text-xs flex flex-col items-center space-y-1 transition"
+              className="absolute left-0 top-20 z-20 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 border-l-0 font-bold px-1.5 py-3 rounded-r-md shadow-sm text-xs flex flex-col items-center space-y-1 transition"
               title="未定リストを開く"
             >
-              <span className="text-sm">＞</span>
+              <span className="text-xs">＞</span>
               {totalUnscheduledCount > 0 && (
-                <span className="bg-white text-blue-700 w-4 h-4 rounded-full flex items-center justify-center text-[9px]">
+                <span className="bg-blue-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[9px]">
                   {totalUnscheduledCount}
                 </span>
               )}
