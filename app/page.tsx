@@ -38,6 +38,9 @@ export default function Home() {
   // サイドバーの開閉状態（デフォルトは非表示: false）
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
+  // サイドバー内のタブ切り替え状態 ('unscheduled' または 'postponed')
+  const [sidebarTab, setSidebarTab] = useState<'unscheduled' | 'postponed'>('unscheduled');
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [targetDateForCreate, setTargetDateForCreate] = useState<string>('');
   const [targetTimeForCreate, setTargetTimeForCreate] = useState<string>('09:00');
@@ -113,7 +116,7 @@ export default function Home() {
     }
   };
 
-  // 抽出条件の修正：タイトルに「日延未定」が含まれているものは常に日延未定リストに含める
+  // リストの抽出条件
   const unscheduledEvents = events.filter((ev) => !ev.date && ev.status !== 'postponed' && !ev.title.includes('日延未定'));
   const postponedEvents = events.filter((ev) => ev.status === 'postponed' || ev.title.includes('日延未定'));
 
@@ -177,7 +180,7 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden relative">
         {/* 未定・日延未定カード置き場（折りたたみ可能なサイドバー） */}
         <aside 
-          className={`absolute inset-y-0 left-0 z-30 w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-6 shadow-2xl transition-transform duration-300 ease-in-out ${
+          className={`absolute inset-y-0 left-0 z-30 w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-4 shadow-2xl transition-transform duration-300 ease-in-out ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -193,92 +196,116 @@ export default function Home() {
             </button>
           </div>
 
-          {/* 未定リスト（ドロップエリア対応） */}
-          <div 
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDropToSidebar(e, 'unscheduled')}
-            className="min-h-[120px] rounded-lg p-1 transition"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold text-gray-600 flex items-center space-x-1">
-                <span>未定リスト</span>
-                <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">
-                  {unscheduledEvents.length}
-                </span>
-              </h3>
-              <button
-                onClick={() => {
-                  setTargetDateForCreate(''); // 日付なし（未定）で作成
-                  setIsCreateModalOpen(true);
-                }}
-                className="px-2 py-1 bg-blue-600 text-white text-[10px] font-semibold rounded hover:bg-blue-700 transition"
-              >
-                ＋ 新規作成
-              </button>
-            </div>
-            <div className="space-y-2">
-              {unscheduledEvents.map((ev) => (
-                <div
-                  key={ev.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', ev.id.toString());
-                  }}
-                  onClick={() => {
-                    setSelectedEvent(ev);
-                    setIsModalOpen(true);
-                  }}
-                  className="bg-white p-2.5 rounded border border-gray-200 text-xs shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition"
-                >
-                  <div className="font-bold text-gray-800">{ev.title}</div>
-                  {ev.address && <div className="text-gray-500 text-[10px] truncate mt-1">{ev.address}</div>}
-                </div>
-              ))}
-              {unscheduledEvents.length === 0 && (
-                <div className="text-[11px] text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded">
-                  ここにドロップして未定に戻す
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 日延未定リスト（ドロップエリア対応） */}
-          <div 
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDropToSidebar(e, 'postponed')}
-            className="min-h-[120px] rounded-lg p-1 transition"
-          >
-            <h3 className="text-xs font-bold text-amber-600 mb-2 flex items-center justify-between">
-              <span>日延未定リスト</span>
-              <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">
+          {/* タブ切り替えボタン */}
+          <div className="flex rounded-lg bg-gray-200 p-1">
+            <button
+              onClick={() => setSidebarTab('unscheduled')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition flex items-center justify-center space-x-1 ${
+                sidebarTab === 'unscheduled'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <span>未定</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${sidebarTab === 'unscheduled' ? 'bg-blue-100 text-blue-700' : 'bg-gray-300 text-gray-700'}`}>
+                {unscheduledEvents.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setSidebarTab('postponed')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition flex items-center justify-center space-x-1 ${
+                sidebarTab === 'postponed'
+                  ? 'bg-white text-amber-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <span>日延未定</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${sidebarTab === 'postponed' ? 'bg-amber-100 text-amber-700' : 'bg-gray-300 text-gray-700'}`}>
                 {postponedEvents.length}
               </span>
-            </h3>
-            <div className="space-y-2">
-              {postponedEvents.map((ev) => (
-                <div
-                  key={ev.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', ev.id.toString());
-                  }}
-                  onClick={() => {
-                    setSelectedEvent(ev);
-                    setIsModalOpen(true);
-                  }}
-                  className="bg-white p-2.5 rounded border border-amber-200 text-xs shadow-sm cursor-grab active:cursor-grabbing hover:border-amber-400 transition"
-                >
-                  <div className="font-bold text-gray-800">{ev.title}</div>
-                  {ev.address && <div className="text-gray-500 text-[10px] truncate mt-1">{ev.address}</div>}
-                </div>
-              ))}
-              {postponedEvents.length === 0 && (
-                <div className="text-[11px] text-gray-400 text-center py-4 border border-dashed border-amber-200 rounded">
-                  ここにドロップして日延未定に戻す
-                </div>
-              )}
-            </div>
+            </button>
           </div>
+
+          {/* 未定タブの中身 */}
+          {sidebarTab === 'unscheduled' && (
+            <div 
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDropToSidebar(e, 'unscheduled')}
+              className="flex-1 flex flex-col min-h-[200px] rounded-lg p-1 transition"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold text-gray-600">未定リスト</h3>
+                <button
+                  onClick={() => {
+                    setTargetDateForCreate(''); // 日付なし（未定）で作成
+                    setIsCreateModalOpen(true);
+                  }}
+                  className="px-2 py-1 bg-blue-600 text-white text-[10px] font-semibold rounded hover:bg-blue-700 transition"
+                >
+                  ＋ 新規作成
+                </button>
+              </div>
+              <div className="space-y-2 overflow-y-auto flex-1">
+                {unscheduledEvents.map((ev) => (
+                  <div
+                    key={ev.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', ev.id.toString());
+                    }}
+                    onClick={() => {
+                      setSelectedEvent(ev);
+                      setIsModalOpen(true);
+                    }}
+                    className="bg-white p-2.5 rounded border border-gray-200 text-xs shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition"
+                  >
+                    <div className="font-bold text-gray-800">{ev.title}</div>
+                    {ev.address && <div className="text-gray-500 text-[10px] truncate mt-1">{ev.address}</div>}
+                  </div>
+                ))}
+                {unscheduledEvents.length === 0 && (
+                  <div className="text-[11px] text-gray-400 text-center py-8 border border-dashed border-gray-200 rounded">
+                    ここにドロップして未定に戻す
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 日延未定タブの中身 */}
+          {sidebarTab === 'postponed' && (
+            <div 
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDropToSidebar(e, 'postponed')}
+              className="flex-1 flex flex-col min-h-[200px] rounded-lg p-1 transition"
+            >
+              <h3 className="text-xs font-bold text-amber-600 mb-2">日延未定リスト</h3>
+              <div className="space-y-2 overflow-y-auto flex-1">
+                {postponedEvents.map((ev) => (
+                  <div
+                    key={ev.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', ev.id.toString());
+                    }}
+                    onClick={() => {
+                      setSelectedEvent(ev);
+                      setIsModalOpen(true);
+                    }}
+                    className="bg-white p-2.5 rounded border border-amber-200 text-xs shadow-sm cursor-grab active:cursor-grabbing hover:border-amber-400 transition"
+                  >
+                    <div className="font-bold text-gray-800">{ev.title}</div>
+                    {ev.address && <div className="text-gray-500 text-[10px] truncate mt-1">{ev.address}</div>}
+                  </div>
+                ))}
+                {postponedEvents.length === 0 && (
+                  <div className="text-[11px] text-gray-400 text-center py-8 border border-dashed border-amber-200 rounded">
+                    ここにドロップして日延未定に戻す
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </aside>
 
         {/* カレンダー本体 */}
