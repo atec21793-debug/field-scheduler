@@ -173,24 +173,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* サブヘッダーバー（CalendarHeaderのすぐ下、メインカレンダーの上） */}
-      {!isSidebarOpen && (
-        <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center shadow-xs">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded shadow-sm text-xs flex items-center space-x-2 transition"
-            title="未定リストを開く"
-          >
-            <span>未定リストを開く ＞</span>
-            {totalUnscheduledCount > 0 && (
-              <span className="bg-white text-blue-700 px-1.5 py-0.2 rounded-full text-[10px]">
-                {totalUnscheduledCount}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
-
       {/* メインエリア（サイドバー ＋ カレンダー） */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* 未定・日延未定カード置き場（折りたたみ可能なサイドバー） */}
@@ -301,12 +283,28 @@ export default function Home() {
 
         {/* カレンダー本体 */}
         <div 
-          className="flex-1 overflow-auto"
+          className="flex-1 overflow-auto relative"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
           }}
         >
+          {/* 0時の行の高さ（約 top-12 あたり、曜日表示の下かつ0時の列の左端）に配置する「＞」タブ */}
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="absolute left-0 top-12 z-20 bg-blue-600 hover:bg-blue-700 text-white font-bold px-2 py-3 rounded-r-lg shadow-md text-xs flex flex-col items-center space-y-1 transition"
+              title="未定リストを開く"
+            >
+              <span className="text-sm">＞</span>
+              {totalUnscheduledCount > 0 && (
+                <span className="bg-white text-blue-700 w-4 h-4 rounded-full flex items-center justify-center text-[9px]">
+                  {totalUnscheduledCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {viewMode === 'month' && (
             <MonthView currentDate={currentDate} events={events} onSelectEvent={(e) => { setSelectedEvent(e); setIsModalOpen(true); }} onCellClick={handleCellClick} />
           )}
