@@ -113,9 +113,9 @@ export default function Home() {
     }
   };
 
-  // 日付が未定（null）のものを抽出
-  const unscheduledEvents = events.filter((ev) => !ev.date && ev.status !== 'postponed' && !ev.title.includes('日延べ'));
-  const postponedEvents = events.filter((ev) => !ev.date && (ev.status === 'postponed' || ev.title.includes('日延べ')));
+  // 抽出条件の修正：タイトルに「日延未定」が含まれているものは常に日延未定リストに含める
+  const unscheduledEvents = events.filter((ev) => !ev.date && ev.status !== 'postponed' && !ev.title.includes('日延未定'));
+  const postponedEvents = events.filter((ev) => ev.status === 'postponed' || ev.title.includes('日延未定'));
 
   const totalUnscheduledCount = unscheduledEvents.length + postponedEvents.length;
 
