@@ -108,9 +108,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .from('events')
       .update({
         title: finalTitle,
-        date,
-        start_time: startTime,
-        end_time: endTime,
+        date: date || null, // 日付が空の場合はnullを渡す
+        start_time: startTime || null,
+        end_time: endTime || null,
         time: timeString,
         address,
         color: selectedColor,
@@ -353,7 +353,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
-                    required
                   />
                 </div>
                 <div>
@@ -429,7 +428,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <Calendar size={16} className="text-blue-500 flex-shrink-0" />
-                <span>{event.date} {event.start_time && event.end_time ? `(${event.start_time} 〜 ${event.end_time})` : ''}</span>
+                <span>{event.date || '日付未設定'} {event.start_time && event.end_time ? `(${event.start_time} 〜 ${event.end_time})` : ''}</span>
               </div>
               
               {event.address && (
