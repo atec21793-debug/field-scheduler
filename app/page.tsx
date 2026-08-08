@@ -117,21 +117,12 @@ export default function Home() {
   const unscheduledEvents = events.filter((ev) => !ev.date && ev.status !== 'postponed' && !ev.title.includes('日延べ'));
   const postponedEvents = events.filter((ev) => !ev.date && (ev.status === 'postponed' || ev.title.includes('日延べ')));
 
-  return (
-    <main className="flex flex-col h-screen bg-white relative">
-      {/* ヘッダー部分にサイドバー開閉ボタンを追加 */}
-      <div className="flex items-center border-b border-gray-200 px-2 bg-white">
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 mr-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition flex items-center space-x-1 text-xs font-semibold"
-          title={isSidebarOpen ? "サイドバーを隠す" : "未定リストを開く"}
-        >
-          <span className="hidden sm:inline">未定リスト</span>
-          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded-full text-[10px] ml-1">
-            {unscheduledEvents.length + postponedEvents.length}
-          </span>
-        </button>
+  const totalUnscheduledCount = unscheduledEvents.length + postponedEvents.length;
 
+  return (
+    <main className="flex flex-col h-screen bg-white relative overflow-hidden">
+      {/* ヘッダー部分（未定リストボタンを削除し、CalendarHeaderのみに） */}
+      <div className="flex items-center border-b border-gray-200 px-2 bg-white">
         <div className="flex-1">
           <CalendarHeader
             currentDate={currentDate}
@@ -184,12 +175,40 @@ export default function Home() {
 
       {/* メインエリア（サイドバー ＋ カレンダー） */}
       <div className="flex flex-1 overflow-hidden relative">
+        {/* 左端の小さめのタブ（サイドバーが閉じている時に表示） */}
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white border border-gray-300 border-l-0 rounded-r-md py-3 px-1 text-gray-600 hover:text-blue-600 hover:bg-gray-50 shadow-md transition flex flex-col items-center space-y-1 text-xs"
+            title="未定リストを開く"
+          >
+            <span className="font-bold text-sm">＞</span>
+            {totalUnscheduledCount > 0 && (
+              <span className="bg-blue-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px]">
+                {totalUnscheduledCount}
+              </span>
+            )}
+          </button>
+        )}
+
         {/* 未定・日延未定カード置き場（折りたたみ可能なサイドバー） */}
         <aside 
-          className={`absolute inset-y-0 left-0 z-30 w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-6 shadow-xl transition-transform duration-300 ease-in-out ${
+          className={`absolute inset-y-0 left-0 z-30 w-72 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex flex-col space-y-6 shadow-2xl transition-transform duration-300 ease-in-out ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:relative md:translate-x-0 ${isSidebarOpen ? 'md:flex' : 'md:hidden'}`}
+          }`}
         >
+          {/* サイドバー閉じるボタン付きヘッダー */}
+          <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+            <span className="text-xs font-bold text-gray-700">未定・日延未定管理</span>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded transition text-xs font-bold"
+              title="サイドバーを閉じる"
+            >
+              ＜ 閉じる
+            </button>
+          </div>
+
           {/* 未定リスト（ドロップエリア対応） */}
           <div 
             onDragOver={(e) => e.preventDefault()}
