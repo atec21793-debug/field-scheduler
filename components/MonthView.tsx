@@ -69,7 +69,7 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
                 <span className={`text-[11px] font-medium px-1.5 py-0.2 rounded-full inline-block ${isToday ? 'bg-blue-600 text-white font-bold' : 'text-gray-700'}`}>
                   {date.getDate()}
                 </span>
-                <div className="flex items-center gap-0.5 overflow-x-auto">
+                <div className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {holidayEvents.map((ev) => (
                     <span
                       key={ev.id}
@@ -82,8 +82,8 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
                 </div>
               </div>
 
-              {/* 予定リスト（スクロール対応） */}
-              <div className="flex-1 space-y-0.5 overflow-y-auto pr-0.5">
+              {/* 予定リスト（スクロール可能だがスクロールバーは非表示） */}
+              <div className="flex-1 space-y-0.5 overflow-y-auto pr-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {normalEvents.map((event) => (
                   <div key={event.id} className="w-full overflow-hidden whitespace-nowrap text-ellipsis text-[10px] leading-tight block">
                     <div className="inline-block w-full overflow-hidden whitespace-nowrap text-ellipsis">
