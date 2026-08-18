@@ -194,8 +194,14 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
               (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
             );
             
-            const todayStr = formatDateStr(new Date());
-            const isToday = headerDateStr === todayStr;
+            const todayStr = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date()).split('/').map(num => num.padStart(2, '0')).join('-');
+
+const isToday = headerDateStr === todayStr;
 
             return (
               <div 
