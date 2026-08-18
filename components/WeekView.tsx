@@ -93,7 +93,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     return h * 60 + m;
   };
 
-  // ドラッグ＆ドロップで予定を移動する処理
+  // ドラッグ＆ドロップで予定を移動する処理（30分刻み対応）
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -103,6 +103,12 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const eventId = Number(eventIdStr);
     const targetEvent = events.find((ev) => Number(ev.id) === eventId);
     if (!targetEvent) return;
+
+    // セル内でのドロップ位置（上半分なら0分、下半分なら30分）を判定
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    const isBottomHalf = clickY >= rect.height / 2;
+    const newStartM = isBottomHalf ? 30 : 0;
 
     let durationMinutes = 60;
     if (targetEvent.start_time && targetEvent.end_time) {
@@ -114,8 +120,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     }
 
     const newStartH = targetHour;
-    const newStartM = targetEvent.start_time ? Number(targetEvent.start_time.split(':')[1]) || 0 : 0;
-    
     const newStartTotalMin = newStartH * 60 + newStartM;
     const newEndTotalMin = newStartTotalMin + durationMinutes;
 
