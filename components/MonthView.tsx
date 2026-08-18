@@ -31,7 +31,7 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
 
   return (
     <div className="flex flex-col h-full bg-white select-none">
-      {/* 本体と同じ grid-cols-7 と divide-x を指定して、縦のラインを完全に一致させる */}
+      {/* 曜日ヘッダー */}
       <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20 divide-x divide-gray-200">
         {weekDayNames.map((name, index) => (
           <div key={index} className="text-center py-1.5">
@@ -46,6 +46,16 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
 
           const dateStr = date.toISOString().split('T')[0];
           const dayEvents = events.filter((ev) => ev.date === dateStr);
+          
+          // 休日イベント（🎌 または #388ddd）を抽出
+          const holidayEvents = dayEvents.filter(
+            (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
+          );
+          // 通常の予定（休日以外）
+          const normalEvents = dayEvents.filter(
+            (ev) => !((ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd')
+          );
+
           const isToday = new Date().toDateString() === date.toDateString();
 
           return (
@@ -54,13 +64,27 @@ export default function MonthView({ currentDate, events, onSelectEvent, onCellCl
               onClick={() => onCellClick(dateStr, '09:00')} 
               className="p-1 hover:bg-gray-50 cursor-pointer transition flex flex-col overflow-hidden"
             >
-              <div className="text-right mb-0.5">
+              {/* 日付と休みの人を横並びで表示するヘッダー部分 */}
+              <div className="flex items-center justify-between mb-1">
                 <span className={`text-[11px] font-medium px-1.5 py-0.2 rounded-full inline-block ${isToday ? 'bg-blue-600 text-white font-bold' : 'text-gray-700'}`}>
                   {date.getDate()}
                 </span>
+                <div className="flex items-center gap-0.5 overflow-x-auto">
+                  {holidayEvents.map((ev) => (
+                    <span
+                      key={ev.id}
+                      style={{ backgroundColor: ev.color || '#388ddd' }}
+                      className="text-white text-[9px] px-1 py-0.5 rounded shadow-sm whitespace-nowrap"
+                    >
+                      {ev.title}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex-1 space-y-0.5 overflow-hidden">
-                {dayEvents.map((event) => (
+
+              {/* 予定リスト（スクロール対応） */}
+              <div className="flex-1 space-y-0.5 overflow-y-auto pr-0.5">
+                {normalEvents.map((event) => (
                   <div key={event.id} className="w-full overflow-hidden whitespace-nowrap text-ellipsis text-[10px] leading-tight block">
                     <div className="inline-block w-full overflow-hidden whitespace-nowrap text-ellipsis">
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
