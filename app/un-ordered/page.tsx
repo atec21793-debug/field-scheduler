@@ -25,6 +25,11 @@ export default function UnOrderedListPage() {
       .not('title', 'ilike', '%(工事)%')
       .not('title', 'ilike', '%現調%')
       .not('title', 'ilike', '%点検%')
+      .not('title', 'ilike', '%カクシン%')
+      .not('title', 'ilike', '%リブラン%')
+      .not('title', 'ilike', '%NJS%')
+      .not('title', 'ilike', '%佐藤工務店%')
+      .not('title', 'ilike', '%ジェイトップ%')
       
       .order('date', { ascending: true });
 
