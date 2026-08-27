@@ -7,7 +7,7 @@ import { ArrowLeft, Calendar, MapPin, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UnOrderedListPage() {
-  const [events, setEvents] = useState<(EventItem & { ordered?: boolean })[]>([]);
+  const [events, setEvents] = useState<(EventItem & { ordered?: boolean; memo?: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 未発注のデータを取得（不要なカードの除外条件を含む）
@@ -100,9 +100,16 @@ export default function UnOrderedListPage() {
                   className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-md transition"
                 >
                   <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap">
                       {isStarred && <span className="text-amber-500 font-bold text-xs">★</span>}
                       <h2 className="text-sm font-bold text-gray-800">{displayTitle}</h2>
+                      
+                      {/* タイトルの横にメモを表示 */}
+                      {event.memo && (
+                        <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+                          {event.memo}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
