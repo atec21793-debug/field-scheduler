@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { EventItem } from '@/app/page';
-import { ArrowLeft, Calendar, MapPin, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UnOrderedListPage() {
@@ -37,7 +37,6 @@ export default function UnOrderedListPage() {
     const { data, error } = await query;
 
     if (!error && data) {
-      // 型アサーションを追加してTypeScriptのエラーを解消
       setEvents(data as (EventItem & { ordered?: boolean; memo?: string })[]);
     }
     setLoading(false);
@@ -59,33 +58,6 @@ export default function UnOrderedListPage() {
       // リストから即座に除外
       setEvents((prev) => prev.filter((event) => String(event.id) !== String(id)));
     }
-  };
-
-  // メモを更新した時の処理（入力中の状態保持）
-  const handleMemoChange = (id: string | number, newMemo: string) => {
-    setEvents((prev) =>
-      prev.map((event) => (String(event.id) === String(id) ? { ...event, memo: newMemo } : event))
-    );
-  };
-
-  // フォーカスが外れた時にDBへ保存
-  const handleMemoBlur = async (id: string | number, memo: string | undefined) => {
-    await supabase
-      .from('events')
-      .update({ memo: memo || '' })
-      .eq('id', id);
-  };
-
-  // ドロップダウンで選択したkWをメモに追加する処理
-  const handleSelectKw = async (id: string | number, currentMemo: string | undefined, kw: string) => {
-    const updatedMemo = currentMemo ? `${currentMemo.trim()} ${kw}` : kw;
-    
-    handleMemoChange(id, updatedMemo);
-
-    await supabase
-      .from('events')
-      .update({ memo: updatedMemo })
-      .eq('id', id);
   };
 
   return (
@@ -129,81 +101,47 @@ export default function UnOrderedListPage() {
               return (
                 <div 
                   key={event.id}
-                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col gap-3 hover:shadow-md transition"
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-md transition"
                 >
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center space-x-2 flex-wrap">
-                        {isStarred && <span className="text-amber-500 font-bold text-xs">★</span>}
-                        <h2 className="text-sm font-bold text-gray-800">{displayTitle}</h2>
-                        
-                        {/* 選択されたメモを1つずつ枠線で囲んで表示 */}
-                        {memoItems.map((item, index) => (
-                          <span 
-                            key={index} 
-                            className="text-xs text-gray-700 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 font-medium"
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <Calendar size={14} className="text-blue-500 flex-shrink-0" />
-                          <span>{event.date} {event.start_time ? `(${event.start_time})` : ''}</span>
-                        </div>
-
-                        {/* 住所表示部分 */}
-                        {event.address && (
-                          <div className="flex items-center space-x-1">
-                            <MapPin size={14} className="text-red-500 flex-shrink-0" />
-                            <span className="text-gray-600 truncate max-w-[220px] sm:max-w-sm">{event.address}</span>
-                          </div>
-                        )}
-                      </div>
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      {isStarred && <span className="text-amber-500 font-bold text-xs">★</span>}
+                      <h2 className="text-sm font-bold text-gray-800">{displayTitle}</h2>
+                      
+                      {/* 選択されたメモを1つずつ枠線で囲んで表示 */}
+                      {memoItems.map((item, index) => (
+                        <span 
+                          key={index} 
+                          className="text-xs text-gray-700 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 font-medium"
+                        >
+                          {item}
+                        </span>
+                      ))}
                     </div>
 
-                    {/* チェックボタン（押すと発注済みになりリストから消える） */}
-                    <button
-                      onClick={() => handleToggleOrdered(event.id, event.ordered || false)}
-                      className="w-full sm:w-auto flex items-center justify-center space-x-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold transition flex-shrink-0"
-                    >
-                      <span>発注済みにする</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <Calendar size={14} className="text-blue-500 flex-shrink-0" />
+                        <span>{event.date} {event.start_time ? `(${event.start_time})` : ''}</span>
+                      </div>
+
+                      {/* 住所表示部分 */}
+                      {event.address && (
+                        <div className="flex items-center space-x-1">
+                          <MapPin size={14} className="text-red-500 flex-shrink-0" />
+                          <span className="text-gray-600 truncate max-w-[220px] sm:max-w-sm">{event.address}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* メモ編集エリア ＆ kW選択ドロップダウン */}
-                  <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-                    <input
-                      type="text"
-                      value={event.memo || ''}
-                      onChange={(e) => handleMemoChange(event.id, e.target.value)}
-                      onBlur={(e) => handleMemoBlur(event.id, e.target.value)}
-                      placeholder="メモを入力..."
-                      className="flex-1 w-full text-xs px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-gray-700"
-                    />
-
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          handleSelectKw(event.id, event.memo, e.target.value);
-                          e.target.value = ""; 
-                        }
-                      }}
-                      defaultValue=""
-                      className="text-xs px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                    >
-                      <option value="" disabled>kwを選択</option>
-                      <option value="2.2kw">2.2kw</option>
-                      <option value="2.5kw">2.5kw</option>
-                      <option value="2.8kw">2.8kw</option>
-                      <option value="3.6kw">3.6kw</option>
-                      <option value="4.0kw">4.0kw</option>
-                      <option value="5.6kw">5.6kw</option>
-                      <option value="6.0kw">6.0kw</option>
-                    </select>
-                  </div>
+                  {/* チェックボタン（押すと発注済みになりリストから消える） */}
+                  <button
+                    onClick={() => handleToggleOrdered(event.id, event.ordered || false)}
+                    className="w-full sm:w-auto flex items-center justify-center space-x-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold transition flex-shrink-0"
+                  >
+                    <span>発注済みにする</span>
+                  </button>
                 </div>
               );
             })}
