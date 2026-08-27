@@ -20,6 +20,8 @@ const COLOR_OPTIONS = [
   { label: '紫', value: '#7c3aed' },
 ];
 
+const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.0kw'];
+
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   // 編集モードの状態
   const [isEditing, setIsEditing] = useState(false);
@@ -108,13 +110,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .from('events')
       .update({
         title: finalTitle,
-        date: date || null, // 日付が空の場合はnullを渡す
+        date: date || null,
         start_time: startTime || null,
         end_time: endTime || null,
         time: timeString,
         address,
         color: selectedColor,
-        ordered: isOrdered, // ordered カラムを更新
+        ordered: isOrdered,
       })
       .eq('id', event.id);
 
@@ -249,10 +251,21 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     onUpdate();
   };
 
+  // kWドロップダウンで選択された時の処理（メモに追記して即座にDB保存）
+  const handleSelectKw = async (kw: string) => {
+    const updatedMemo = memo ? `${memo} ${kw}` : kw;
+    setMemo(updatedMemo);
+    
+    await supabase
+      .from('events')
+      .update({ memo: updatedMemo, report })
+      .eq('id', event.id);
+    onUpdate();
+  };
+
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('('));
 
-  // 日延べ先の日付・時間を抽出
   const formatPostponedInfo = (titleStr: string) => {
     const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
     if (match) {
@@ -330,7 +343,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 />
               </div>
 
-              {/* 商品発注済みチェックボックス */}
               <div className="flex items-center space-x-2 pt-1 pb-1 bg-white/60 px-2.5 py-1.5 rounded border border-blue-100">
                 <input
                   id="orderedCheckbox"
@@ -387,7 +399,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               </div>
 
-              {/* カラー選択 */}
               <div>
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">カードの色</label>
                 <div className="flex space-x-2">
@@ -424,7 +435,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               </div>
             </form>
           ) : (
-            /* 通常表示時の日時、場所、商品発注済みラベル、新日程表示 */
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <Calendar size={16} className="text-blue-500 flex-shrink-0" />
@@ -445,7 +455,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {/* 住所の下に「商品発注済み」バッジを表示 */}
               {isOrdered && (
                 <div className="flex items-center space-x-1.5 pt-0.5">
                   <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
@@ -454,7 +463,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {/* 住所の下に新日程を表示 */}
               {formattedPostpone && (
                 <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
                   <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
@@ -571,10 +579,28 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </form>
           )}
 
-          {/* メモ欄 & 作業内容・日報欄 */}
+          {/* メモ欄 & kWドロップダウン & 作業内容・日報欄 */}
           <div className="space-y-4 pt-2 border-t border-gray-100">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">メモ欄</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-gray-700">メモ欄</label>
+                {/* kWクイック選択用ドロップダウン */}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleSelectKw(e.target.value);
+                      e.target.value = ""; // 選択後にリセット
+                    }
+                  }}
+                  defaultValue=""
+                  className="text-xs px-2 py-1 bg-white border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="" disabled>kwを選択して追加</option>
+                  {KW_OPTIONS.map((kw) => (
+                    <option key={kw} value={kw}>{kw}</option>
+                  ))}
+                </select>
+              </div>
               <textarea
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
