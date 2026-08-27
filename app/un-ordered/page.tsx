@@ -10,15 +10,13 @@ export default function UnOrderedListPage() {
   const [events, setEvents] = useState<(EventItem & { ordered?: boolean; memo?: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 未発注かつメモに「kw」が含まれているデータのみを取得
+  // 発注済みになっていない全ての予定を取得（不要なカードの除外条件を含む）
   const fetchUnOrderedEvents = async () => {
     setLoading(true);
     let query = supabase
       .from('events')
       .select('*')
       .or('ordered.is.null,ordered.eq.false') // 未発注のもの
-      .not('memo', 'is', null)                // メモが空ではないもの
-      .ilike('memo', '%kw%')                  // メモに「kw」が含まれているもの
       .not('title', 'ilike', '%休み%')
       .not('title', 'ilike', '%🎌%')
       .not('title', 'ilike', '%（く）%')
@@ -87,7 +85,7 @@ export default function UnOrderedListPage() {
           <div className="text-center py-12 text-gray-400 text-sm">読み込み中...</div>
         ) : events.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400 space-y-2">
-            <p className="text-sm font-medium">kWが選択された未発注の予定はありません。</p>
+            <p className="text-sm font-medium">未発注の予定はありません。</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -108,7 +106,7 @@ export default function UnOrderedListPage() {
                       {isStarred && <span className="text-amber-500 font-bold text-xs">★</span>}
                       <h2 className="text-sm font-bold text-gray-800">{displayTitle}</h2>
                       
-                      {/* 選択されたメモを1つずつ枠線で囲んで表示 */}
+                      {/* 選択されたメモ（kW等）がある場合のみ1つずつ枠線で囲んで表示 */}
                       {memoItems.map((item, index) => (
                         <span 
                           key={index} 
