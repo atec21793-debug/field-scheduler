@@ -19,12 +19,12 @@ export default function OutsourcingPage() {
   const [items, setItems] = useState<OutsourcingItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // モーダル用のフォーム状態
+  // モーダル用フォームの状態
   const [title, setTitle] = useState('');
   const [isVacant, setIsVacant] = useState(false);
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('09:00');
-  
+
   const getDefaultEndTime = (start: string) => {
     if (!start) return '10:00';
     const [h, m] = start.split(':').map(Number);
@@ -34,8 +34,7 @@ export default function OutsourcingPage() {
 
   const [endTime, setEndTime] = useState('10:00');
   const [address, setAddress] = useState('');
-  const [notes, setNotes] = useState('');
-
+  
   const colorOptions = [
     { label: 'グレー', value: '#4b5563' },
     { label: '赤', value: '#dc2626' },
@@ -88,18 +87,17 @@ export default function OutsourcingPage() {
         time: startTime && endTime ? `${startTime} - ${endTime}` : null,
         address,
         color,
-        notes,
       },
     ]);
 
     if (!error) {
       setIsModalOpen(false);
-      // フォームリセット
+      // フォーム初期化
       setTitle('');
       setIsVacant(false);
       setDate('');
       setAddress('');
-      setNotes('');
+      setColor(colorOptions[0].value);
       fetchOutsourcingData();
     } else {
       console.error('Error inserting outsourcing event:', error);
@@ -137,7 +135,7 @@ export default function OutsourcingPage() {
           </button>
         </div>
 
-        {/* 一覧表示 */}
+        {/* 登録済みリスト一覧 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 font-medium text-sm text-gray-700">
             登録済みリスト ({items.length}件)
@@ -161,7 +159,6 @@ export default function OutsourcingPage() {
                       {item.time && <span>⏰ {item.time}</span>}
                     </div>
                     {item.address && <p className="text-xs text-gray-500">📍 {item.address}</p>}
-                    {item.notes && <p className="text-xs text-gray-400">備考: {item.notes}</p>}
                   </div>
                   <button
                     onClick={() => handleDeleteItem(item.id)}
@@ -176,7 +173,7 @@ export default function OutsourcingPage() {
           )}
         </div>
 
-        {/* 新規登録モーダル */}
+        {/* 新規登録モーダル（ご提示いただいたフォーム形式） */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
@@ -194,7 +191,7 @@ export default function OutsourcingPage() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
-                    placeholder="例: ○○様邸 業務委託作業"
+                    placeholder="例: ○○様邸 現場施工"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                   />
                 </div>
@@ -214,7 +211,7 @@ export default function OutsourcingPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-gray-600">予定日（未定にする場合は空欄でOK）</label>
+                    <label className="block text-xs font-semibold text-gray-600">予定日（未定にする場合は空欄のままでOK）</label>
                     {date && (
                       <button type="button" onClick={() => setDate('')} className="text-[10px] text-blue-600 hover:underline">
                         日付をクリア
@@ -251,17 +248,6 @@ export default function OutsourcingPage() {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="例: 東京都新宿区..."
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">備考</label>
-                  <input
-                    type="text"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="例: 鍵の預かりあり"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                   />
                 </div>
