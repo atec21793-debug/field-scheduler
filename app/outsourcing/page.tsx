@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, X, Clock, Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, X, Clock, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 
 interface OutsourcingItem {
   id: string;
@@ -18,6 +18,7 @@ interface OutsourcingItem {
 export default function OutsourcingPage() {
   const [items, setItems] = useState<OutsourcingItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null); // 編集中のID
 
   const [contractor, setContractor] = useState('');
   const [title, setTitle] = useState('');
@@ -72,38 +73,103 @@ export default function OutsourcingPage() {
     fetchOutsourcingData();
   }, []);
 
+  // 新規登録モーダルを開く
+  const handleOpenCreateModal = () => {
+    setEditingId(null);
+    setContractor('');
+    setTitle('');
+    setIsVacant(false);
+    setDate('');
+    setStartTime('09:00');
+    setEndTime('10:00');
+    setAddress('');
+    setColor(colorOptions[0].value);
+    setIsModalOpen(true);
+  };
+
+  // 編集モーダルを開く
+  const handleOpenEditModal = (item: OutsourcingItem) => {
+    setEditingId(item.id);
+    setContractor(item.contractor || '');
+    
+    // タイトルに「🈳」が含まれているかチェックして分離
+    const titleVal = item.title || '';
+    if (titleVal.startsWith('🈳')) {
+      setIsVacant(true);
+      setTitle(titleVal.replace('🈳', ''));
+    } else {
+      setIsVacant(false);
+      setTitle(titleVal);
+    }
+
+    setDate(item.date || '');
+
+    // 時間のパース (例: "09:00 - 10:00")
+    if (item.time && item.time.includes('-')) {
+      const parts = item.time.split('-').map((s) => s.trim());
+      setStartTime(parts[0] || '09:00');
+      setEndTime(parts[1] || '10:00');
+    } else {
+      setStartTime('09:00');
+      setEndTime('10:00');
+    }
+
+    setAddress(item.address || '');
+    setColor(item.color || colorOptions[0].value);
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     const finalTitle = isVacant ? `🈳${title}` : title;
+    const timeValue = startTime && endTime ? `${startTime} - ${endTime}` : null;
 
-    const { error } = await supabase.from('outsourcing_events').insert([
-      {
-        contractor: contractor.trim() ? contractor : null,
-        title: finalTitle,
-        date: date ? date : null,
-        time: startTime && endTime ? `${startTime} - ${endTime}` : null,
-        address,
-        color,
-      },
-    ]);
+    if (editingId) {
+      // 既存データの更新（編集）
+      const { error } = await supabase
+        .from('outsourcing_events')
+        .update({
+          contractor: contractor.trim() ? contractor : null,
+          title: finalTitle,
+          date: date ? date : null,
+          time: timeValue,
+          address,
+          color,
+        })
+        .eq('id', editingId);
 
-    if (!error) {
-      setIsModalOpen(false);
-      setContractor('');
-      setTitle('');
-      setIsVacant(false);
-      setDate('');
-      setAddress('');
-      setColor(colorOptions[0].value);
-      fetchOutsourcingData();
+      if (!error) {
+        setIsModalOpen(false);
+        fetchOutsourcingData();
+      } else {
+        console.error('Error updating outsourcing event:', error);
+      }
     } else {
-      console.error('Error inserting outsourcing event:', error);
+      // 新規登録
+      const { error } = await supabase.from('outsourcing_events').insert([
+        {
+          contractor: contractor.trim() ? contractor : null,
+          title: finalTitle,
+          date: date ? date : null,
+          time: timeValue,
+          address,
+          color,
+        },
+      ]);
+
+      if (!error) {
+        setIsModalOpen(false);
+        fetchOutsourcingData();
+      } else {
+        console.error('Error inserting outsourcing event:', error);
+      }
     }
   };
 
   const handleDeleteItem = async (id: string) => {
+    if (!confirm('本当に削除しますか？')) return;
     const { error } = await supabase.from('outsourcing_events').delete().eq('id', id);
     if (!error) {
       setItems(items.filter((item) => item.id !== id));
@@ -125,7 +191,7 @@ export default function OutsourcingPage() {
             <h1 className="text-2xl font-bold text-gray-800">業務委託管理</h1>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition shadow-sm"
           >
             <Plus size={16} />
@@ -133,7 +199,6 @@ export default function OutsourcingPage() {
           </button>
         </div>
 
-        {/* リスト一覧：未発注リストと同じようなシンプルな白カード型に整理 */}
         <div className="space-y-3">
           <div className="text-sm font-medium text-gray-600 px-1">
             登録済みリスト ({items.length}件)
@@ -151,12 +216,10 @@ export default function OutsourcingPage() {
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center space-x-2">
-                    {/* 丸いカラーアイコン */}
                     <span
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color || '#4b5563' }}
                     />
-                    {/* 委託先バッジ */}
                     {item.contractor && (
                       <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium border border-gray-200">
                         {item.contractor}
@@ -187,12 +250,22 @@ export default function OutsourcingPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDeleteItem(item.id)}
-                  className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-medium rounded-md transition"
-                >
-                  削除
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleOpenEditModal(item)}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-md transition flex items-center space-x-1"
+                  >
+                    <Edit2 size={12} />
+                    <span>編集</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-medium rounded-md transition flex items-center space-x-1"
+                  >
+                    <Trash2 size={12} />
+                    <span>削除</span>
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -202,7 +275,9 @@ export default function OutsourcingPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">新規業務委託の登録</h3>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {editingId ? '業務委託の編集' : '新規業務委託の登録'}
+                </h3>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="p-1 rounded-full hover:bg-gray-100 text-gray-500">
                   <X size={20} />
                 </button>
@@ -305,7 +380,9 @@ export default function OutsourcingPage() {
 
                 <div className="flex space-x-2 pt-4">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm">キャンセル</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">登録する</button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">
+                    {editingId ? '更新する' : '登録する'}
+                  </button>
                 </div>
               </form>
             </div>
