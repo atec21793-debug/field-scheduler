@@ -70,6 +70,14 @@ export default function CalendarHeader({
             <span>依頼書</span>
           </Link>
 
+          <Link
+            href="/outsourcing"
+            style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' }}
+            className="flex items-center space-x-1 px-3 py-1.5 border rounded-md text-sm font-medium shadow-sm transition hover:bg-gray-200"
+            title="業務委託リストを開く"
+          >
+            <span>業務委託</span>
+          </Link>
         </div>
 
         {/* 検索入力欄 */}
