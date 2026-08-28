@@ -7,12 +7,12 @@ import { ArrowLeft, Plus, Trash2, X, Clock } from 'lucide-react';
 
 interface OutsourcingItem {
   id: string;
+  contractor: string; // 委託先
   title: string;
   date: string | null;
   time: string | null;
   address: string | null;
   color: string;
-  notes: string | null;
 }
 
 export default function OutsourcingPage() {
@@ -20,6 +20,7 @@ export default function OutsourcingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // モーダル用フォームの状態
+  const [contractor, setContractor] = useState('委託先A'); // デフォルトの委託先
   const [title, setTitle] = useState('');
   const [isVacant, setIsVacant] = useState(false);
   const [date, setDate] = useState('');
@@ -45,6 +46,9 @@ export default function OutsourcingPage() {
   ];
   const [color, setColor] = useState(colorOptions[0].value);
 
+  // 委託先の選択肢（必要に応じて書き換えてください）
+  const contractorOptions = ['委託先A', '委託先B', '委託先C', 'その他'];
+
   const timeOptions: string[] = [];
   for (let hour = 0; hour < 24; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
@@ -57,7 +61,6 @@ export default function OutsourcingPage() {
     setEndTime(getDefaultEndTime(newStart));
   };
 
-  // データの取得
   const fetchOutsourcingData = async () => {
     const { data, error } = await supabase
       .from('outsourcing_events')
@@ -73,7 +76,6 @@ export default function OutsourcingPage() {
     fetchOutsourcingData();
   }, []);
 
-  // データの登録
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -82,6 +84,7 @@ export default function OutsourcingPage() {
 
     const { error } = await supabase.from('outsourcing_events').insert([
       {
+        contractor,
         title: finalTitle,
         date: date ? date : null,
         time: startTime && endTime ? `${startTime} - ${endTime}` : null,
@@ -114,7 +117,6 @@ export default function OutsourcingPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        {/* ヘッダー */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Link
@@ -135,7 +137,6 @@ export default function OutsourcingPage() {
           </button>
         </div>
 
-        {/* 登録済みリスト一覧 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 font-medium text-sm text-gray-700">
             登録済みリスト ({items.length}件)
@@ -152,6 +153,11 @@ export default function OutsourcingPage() {
                         className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: item.color || '#4b5563' }}
                       />
+                      {item.contractor && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium border border-gray-200">
+                          {item.contractor}
+                        </span>
+                      )}
                       <span className="text-gray-800 font-semibold text-sm">{item.title}</span>
                     </div>
                     <div className="text-xs text-gray-500 flex items-center space-x-3">
@@ -173,7 +179,6 @@ export default function OutsourcingPage() {
           )}
         </div>
 
-        {/* 新規登録モーダル（ご提示いただいたフォーム形式） */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
@@ -184,6 +189,20 @@ export default function OutsourcingPage() {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                {/* 委託先の選択欄を追加 */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">委託先</label>
+                  <select
+                    value={contractor}
+                    onChange={(e) => setContractor(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                  >
+                    {contractorOptions.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">タイトル・現場名</label>
                   <input
