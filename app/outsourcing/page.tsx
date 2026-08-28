@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, X, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, X, Clock, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 
 interface OutsourcingItem {
   id: string;
@@ -133,45 +133,68 @@ export default function OutsourcingPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 font-medium text-sm text-gray-700">
+        {/* リスト一覧：未発注リストと同じようなシンプルな白カード型に整理 */}
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-gray-600 px-1">
             登録済みリスト ({items.length}件)
           </div>
+
           {items.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 text-sm">業務委託の登録はありません。</div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {items.map((item) => (
-                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: item.color || '#4b5563' }}
-                      />
-                      {item.contractor && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium border border-gray-200">
-                          {item.contractor}
-                        </span>
-                      )}
-                      <span className="text-gray-800 font-semibold text-sm">{item.title}</span>
-                    </div>
-                    <div className="text-xs text-gray-500 flex items-center space-x-3">
-                      {item.date && <span>📅 {item.date}</span>}
-                      {item.time && <span>⏰ {item.time}</span>}
-                    </div>
-                    {item.address && <p className="text-xs text-gray-500">📍 {item.address}</p>}
-                  </div>
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 transition"
-                    title="削除"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+            <div className="bg-white rounded-lg p-8 text-center text-gray-500 text-sm border border-gray-200 shadow-sm">
+              業務委託の登録はありません。
             </div>
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm flex items-center justify-between hover:border-gray-300 transition"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center space-x-2">
+                    {/* 丸いカラーアイコン */}
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: item.color || '#4b5563' }}
+                    />
+                    {/* 委託先バッジ */}
+                    {item.contractor && (
+                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium border border-gray-200">
+                        {item.contractor}
+                      </span>
+                    )}
+                    <span className="text-gray-900 font-semibold text-sm">{item.title}</span>
+                  </div>
+
+                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    {item.date && (
+                      <span className="flex items-center space-x-1">
+                        <CalendarIcon size={13} className="text-gray-400" />
+                        <span>{item.date}</span>
+                      </span>
+                    )}
+                    {item.time && (
+                      <span className="flex items-center space-x-1">
+                        <Clock size={13} className="text-gray-400" />
+                        <span>{item.time}</span>
+                      </span>
+                    )}
+                    {item.address && (
+                      <span className="flex items-center space-x-1">
+                        <MapPin size={13} className="text-gray-400" />
+                        <span>{item.address}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleDeleteItem(item.id)}
+                  className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-medium rounded-md transition"
+                >
+                  削除
+                </button>
+              </div>
+            ))
           )}
         </div>
 
@@ -185,7 +208,6 @@ export default function OutsourcingPage() {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                {/* 委託先の入力欄を通常のテキスト入力に変更 */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">委託先</label>
                   <input
