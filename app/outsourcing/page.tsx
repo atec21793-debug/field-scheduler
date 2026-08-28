@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Trash2, X, Clock } from 'lucide-react';
 
 interface OutsourcingItem {
   id: string;
-  contractor: string; // 委託先
+  contractor: string | null;
   title: string;
   date: string | null;
   time: string | null;
@@ -19,8 +19,7 @@ export default function OutsourcingPage() {
   const [items, setItems] = useState<OutsourcingItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // モーダル用フォームの状態
-  const [contractor, setContractor] = useState('委託先A'); // デフォルトの委託先
+  const [contractor, setContractor] = useState('');
   const [title, setTitle] = useState('');
   const [isVacant, setIsVacant] = useState(false);
   const [date, setDate] = useState('');
@@ -45,9 +44,6 @@ export default function OutsourcingPage() {
     { label: '紫', value: '#7c3aed' },
   ];
   const [color, setColor] = useState(colorOptions[0].value);
-
-  // 委託先の選択肢（必要に応じて書き換えてください）
-  const contractorOptions = ['委託先A', '委託先B', '委託先C', 'その他'];
 
   const timeOptions: string[] = [];
   for (let hour = 0; hour < 24; hour++) {
@@ -84,7 +80,7 @@ export default function OutsourcingPage() {
 
     const { error } = await supabase.from('outsourcing_events').insert([
       {
-        contractor,
+        contractor: contractor.trim() ? contractor : null,
         title: finalTitle,
         date: date ? date : null,
         time: startTime && endTime ? `${startTime} - ${endTime}` : null,
@@ -95,7 +91,7 @@ export default function OutsourcingPage() {
 
     if (!error) {
       setIsModalOpen(false);
-      // フォーム初期化
+      setContractor('');
       setTitle('');
       setIsVacant(false);
       setDate('');
@@ -189,18 +185,16 @@ export default function OutsourcingPage() {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                {/* 委託先の選択欄を追加 */}
+                {/* 委託先の入力欄を通常のテキスト入力に変更 */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">委託先</label>
-                  <select
+                  <input
+                    type="text"
                     value={contractor}
                     onChange={(e) => setContractor(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
-                  >
-                    {contractorOptions.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    placeholder="例: 株式会社○○"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  />
                 </div>
 
                 <div>
