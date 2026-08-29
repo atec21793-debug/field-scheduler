@@ -130,7 +130,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // 「日延未定」の文字を削除し、先頭に「🔁」を付与する処理
+    // 「日延未定」の削除 or 未設定（もともと日付がなかったもの＝未定リスト）からの移動を判定して🔁を付与
     let updatedTitle = targetEvent.title || '';
     if (updatedTitle.includes('日延未定')) {
       updatedTitle = updatedTitle
@@ -138,8 +138,9 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         .replace(/\s+/g, ' ')
         .trim();
     }
-    
-    // すでに「🔁」がついていなければ先頭につける
+
+    // もともとカレンダーに日付が割り当てられていなかった場合（未定リスト等からの移動）も考慮し、
+    // まだ「🔁」がついていなければ先頭に「🔁」を付与する
     if (!updatedTitle.startsWith('🔁')) {
       updatedTitle = `🔁${updatedTitle}`;
     }
@@ -288,7 +289,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
               };
             });
 
-            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - b.endMin));
+            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
 
             const tempPositionedEvents: Omit<PositionedEvent, 'totalCols'>[] = [];
             const columns: ParsedEvent[][] = [];
