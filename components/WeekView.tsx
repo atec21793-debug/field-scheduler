@@ -130,11 +130,26 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
+    // 「日延未定」の文字を削除し、先頭に「🔁」を付与する処理
+    let updatedTitle = targetEvent.title || '';
+    if (updatedTitle.includes('日延未定')) {
+      updatedTitle = updatedTitle
+        .replace(/日延未定/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    
+    // すでに「🔁」がついていなければ先頭につける
+    if (!updatedTitle.startsWith('🔁')) {
+      updatedTitle = `🔁${updatedTitle}`;
+    }
+
     const { error } = await supabase.from('events').update({
       date: targetDateStr,
       start_time: newStartTime,
       end_time: newEndTime,
       time: newTimeString,
+      title: updatedTitle,
     }).eq('id', eventId);
 
     if (!error && onUpdate) {
@@ -199,13 +214,13 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
             );
             
             const todayStr = new Intl.DateTimeFormat('ja-JP', {
-  timeZone: 'Asia/Tokyo',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-}).format(new Date()).split('/').map(num => num.padStart(2, '0')).join('-');
+              timeZone: 'Asia/Tokyo',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            }).format(new Date()).split('/').map(num => num.padStart(2, '0')).join('-');
 
-const isToday = headerDateStr === todayStr;
+            const isToday = headerDateStr === todayStr;
 
             return (
               <div 
@@ -273,7 +288,7 @@ const isToday = headerDateStr === todayStr;
               };
             });
 
-            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
+            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - b.endMin));
 
             const tempPositionedEvents: Omit<PositionedEvent, 'totalCols'>[] = [];
             const columns: ParsedEvent[][] = [];
