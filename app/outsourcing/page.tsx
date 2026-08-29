@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, Edit2, X, Clock, Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, X, Clock, Calendar as CalendarIcon, MapPin, FileText } from 'lucide-react';
 
 interface OutsourcingItem {
   id: string;
@@ -12,6 +12,7 @@ interface OutsourcingItem {
   date: string | null;
   time: string | null;
   address: string | null;
+  memo: string | null;
   color: string;
 }
 
@@ -35,6 +36,7 @@ export default function OutsourcingPage() {
 
   const [endTime, setEndTime] = useState('10:00');
   const [address, setAddress] = useState('');
+  const [memo, setMemo] = useState('');
   
   const colorOptions = [
     { label: 'グレー', value: '#4b5563' },
@@ -82,6 +84,7 @@ export default function OutsourcingPage() {
     setStartTime('09:00');
     setEndTime('10:00');
     setAddress('');
+    setMemo('');
     setColor(colorOptions[0].value);
     setIsModalOpen(true);
   };
@@ -111,6 +114,7 @@ export default function OutsourcingPage() {
     }
 
     setAddress(item.address || '');
+    setMemo(item.memo || '');
     setColor(item.color || colorOptions[0].value);
     setIsModalOpen(true);
   };
@@ -131,6 +135,7 @@ export default function OutsourcingPage() {
           date: date ? date : null,
           time: timeValue,
           address,
+          memo: memo.trim() ? memo : null,
           color,
         })
         .eq('id', editingId);
@@ -147,6 +152,7 @@ export default function OutsourcingPage() {
           date: date ? date : null,
           time: timeValue,
           address,
+          memo: memo.trim() ? memo : null,
           color,
         },
       ]);
@@ -158,7 +164,8 @@ export default function OutsourcingPage() {
     }
   };
 
-  const handleDeleteItem = async (id: string) => {
+  const handleDeleteItem = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm('本当に削除しますか？')) return;
     const { error } = await supabase.from('outsourcing_events').delete().eq('id', id);
     if (!error) {
@@ -170,7 +177,7 @@ export default function OutsourcingPage() {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-2xl mx-auto space-y-4">
         
-        {/* 未発注リスト風のヘッダーカード */}
+        {/* ヘッダーカード */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link
@@ -197,7 +204,7 @@ export default function OutsourcingPage() {
           </div>
         </div>
 
-        {/* リスト部分 */}
+        {/* リスト部分（カードクリックで編集可能に） */}
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center text-gray-400 text-xs border border-gray-100 shadow-sm">
@@ -207,7 +214,8 @@ export default function OutsourcingPage() {
             items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-gray-200 transition space-y-2.5"
+                onClick={() => handleOpenEditModal(item)}
+                className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-blue-300 hover:shadow-md transition cursor-pointer space-y-2.5"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
@@ -223,7 +231,7 @@ export default function OutsourcingPage() {
                     <span className="text-gray-900 font-bold text-sm">{item.title}</span>
                   </div>
 
-                  <div className="flex items-center space-x-1.5">
+                  <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleOpenEditModal(item)}
                       className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -232,7 +240,7 @@ export default function OutsourcingPage() {
                       <Edit2 size={15} />
                     </button>
                     <button
-                      onClick={() => handleDeleteItem(item.id)}
+                      onClick={(e) => handleDeleteItem(item.id, e)}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="削除"
                     >
@@ -261,16 +269,23 @@ export default function OutsourcingPage() {
                     </span>
                   )}
                 </div>
+
+                {item.memo && (
+                  <div className="text-xs bg-gray-50 text-gray-600 p-2.5 rounded-xl border border-gray-100 flex items-start space-x-2 mt-2">
+                    <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                    <p className="whitespace-pre-wrap leading-relaxed">{item.memo}</p>
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
 
-        {/* モーダル部分は変更なし */}
+        {/* モーダル */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
                 <h3 className="text-base font-bold text-gray-800">
                   {editingId ? '業務委託の編集' : '新規業務委託の登録'}
                 </h3>
@@ -278,7 +293,7 @@ export default function OutsourcingPage() {
                   <X size={20} />
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">委託先</label>
                   <input
@@ -359,6 +374,17 @@ export default function OutsourcingPage() {
                 </div>
 
                 <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">メモ・詳細</label>
+                  <textarea
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    rows={3}
+                    placeholder="作業の注意点やメモなどを入力..."
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none resize-none"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">カードカラー</label>
                   <div className="flex space-x-3">
                     {colorOptions.map((c) => (
@@ -373,7 +399,7 @@ export default function OutsourcingPage() {
                   </div>
                 </div>
 
-                <div className="flex space-x-2 pt-4">
+                <div className="flex space-x-2 pt-4 flex-shrink-0">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50">キャンセル</button>
                   <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 shadow-sm">
                     {editingId ? '更新する' : '登録する'}
