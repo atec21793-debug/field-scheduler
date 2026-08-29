@@ -20,7 +20,7 @@ const COLOR_OPTIONS = [
   { label: '紫', value: '#7c3aed' },
 ];
 
-const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.0kw'];
+const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
 
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   // 編集モードの状態
