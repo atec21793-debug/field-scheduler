@@ -190,8 +190,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      // 日延べにした時に元のカードに日付や時間を入れない形に変更
-      let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
+      let originalTitleWithPostpone = `日延べ (${newPostponeDate} ${newStartTimeStr} 〜 ${newEndTimeStr}) ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
       const { error: updateError } = await supabase
