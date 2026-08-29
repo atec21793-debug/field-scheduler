@@ -130,19 +130,17 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // 「日延未定」の削除 or 未設定（もともと日付がなかったもの＝未定リスト）からの移動を判定して🔁を付与
+    // 「日延未定」が含まれていた場合のみ、それを削除して先頭に「🔁」を付与する
     let updatedTitle = targetEvent.title || '';
     if (updatedTitle.includes('日延未定')) {
       updatedTitle = updatedTitle
         .replace(/日延未定/g, '')
         .replace(/\s+/g, ' ')
         .trim();
-    }
 
-    // もともとカレンダーに日付が割り当てられていなかった場合（未定リスト等からの移動）も考慮し、
-    // まだ「🔁」がついていなければ先頭に「🔁」を付与する
-    if (!updatedTitle.startsWith('🔁')) {
-      updatedTitle = `🔁${updatedTitle}`;
+      if (!updatedTitle.startsWith('🔁')) {
+        updatedTitle = `🔁${updatedTitle}`;
+      }
     }
 
     const { error } = await supabase.from('events').update({
