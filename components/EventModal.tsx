@@ -23,7 +23,6 @@ const COLOR_OPTIONS = [
 const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
 
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
-  // 編集モードの状態
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(event.title || '');
   const [date, setDate] = useState(event.date || '');
@@ -32,24 +31,18 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [address, setAddress] = useState(event.address || '');
   const [selectedColor, setSelectedColor] = useState(event.color || '#1e3a8a');
 
-  // 重要フラグ (★から始まっているか)
   const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
-  
-  // --- ordered カラムの値で管理するステート ---
   const [isOrdered, setIsOrdered] = useState(event.ordered || false);
-  // ---------------------------------------------
 
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
   const [isSaving, setIsSaving] = useState(false);
 
-  // 日延べ編集用の状態
   const [showPostponeForm, setShowPostponeForm] = useState(false);
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('undecided');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
-  // ヘッダーでの重要フラグの即時変更
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     setIsStarred(checked);
@@ -68,7 +61,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // 完了にする処理
   const handleToggleComplete = async () => {
     const newStatus = event.status === 'completed' ? 'active' : 'completed';
     const { error } = await supabase
@@ -82,14 +74,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // 時間文字列（HH:mm）を分に変換するヘルパー
   const timeToMinutes = (timeStr?: string | null) => {
     if (!timeStr) return 0;
     const [h, m] = timeStr.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
   };
 
-  // 分を時間文字列（HH:mm）に変換するヘルパー
   const minutesToTime = (totalMinutes: number) => {
     const clamped = Math.max(0, Math.min(totalMinutes, 24 * 60 - 1));
     const h = Math.floor(clamped / 60);
@@ -97,7 +87,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // 予定自体の基本情報の保存
   const handleSaveBasicInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -127,7 +116,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // 日延べ登録の実行
   const handleConfirmPostpone = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -138,21 +126,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/^日延べ\s*/, '')
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
-
-    // もとの日付を「8月27日」のような分かりやすい形式にフォーマットする
-    const formatOriginalDateString = (dateStr?: string | null, startStr?: string | null) => {
-      if (!dateStr) return '';
-      const parts = dateStr.split(/[-/]/);
-      if (parts.length >= 3) {
-        const m = parseInt(parts[1], 10);
-        const d = parseInt(parts[2], 10);
-        const timePart = startStr ? ` ${startStr}` : '';
-        return `${m}月${d}日${timePart}`;
-      }
-      return dateStr;
-    };
-
-    const originalDateText = formatOriginalDateString(event.date, event.start_time);
 
     if (postponeType === 'undecided') {
       let newTitle = `日延未定 ${cleanTitle}`.trim();
@@ -184,8 +157,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
-      // 新しく作成されるカードのタイトルにもとの日程を含める（例: 🔁 [もとの日程: 8月27日] タイトル）
-      let newCardTitle = `🔁 [もとの日程: ${originalDateText}] ${cleanTitle}`.trim();
+      // 新規作成カードのタイトルに元の日付を入れない（そのままクリーンなタイトルを使用）
+      let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
       const { error: insertError } = await supabase.from('events').insert([
@@ -206,7 +179,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      // 元のカードはシンプルに「日延べ」とステータスを完了にする
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
@@ -225,14 +197,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // 日延べ解除の処理
   const handleRemovePostpone = async () => {
     let cleanTitle = (event.title || '')
       .replace(/^★\s*/, '')
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
-      .replace(/\[もとの日程:[^\]]+\]\s*/g, '')
       .trim();
 
     if (isStarred) cleanTitle = `★ ${cleanTitle}`;
@@ -248,7 +218,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // 削除処理
   const handleDelete = async () => {
     if (confirm('この予定を削除しますか？')) {
       const { error } = await supabase.from('events').delete().eq('id', event.id);
@@ -259,7 +228,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // メモや日報の自動保存
   const handleSaveNotes = async () => {
     await supabase
       .from('events')
@@ -268,7 +236,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     onUpdate();
   };
 
-  // kWドロップダウンで選択された時の処理（メモに追記して即座にDB保存）
   const handleSelectKw = async (kw: string) => {
     const updatedMemo = memo ? `${memo} ${kw}` : kw;
     setMemo(updatedMemo);
@@ -281,17 +248,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
 
   const titleStr = event.title || '';
-  const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('[もとの日程:'));
-
-  // 新規カードのタイトルに含まれる「もとの日程」を抽出
-  const extractOriginalDateFromNewTitle = (titleStr: string) => {
-    const match = titleStr.match(/\[もとの日程:\s*([^\]]+)\]/);
-    if (match && match[1]) {
-      return match[1];
-    }
-    return null;
-  };
-  const originalDateTextFromNewTitle = extractOriginalDateFromNewTitle(titleStr);
+  const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
 
   const formatPostponedInfo = (titleStr: string) => {
     const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
@@ -310,8 +267,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const formattedPostpone = formatPostponedInfo(event.title || '');
   const displayTitle = (event.title || '')
     .replace(/^★\s*/, '')
-    .replace(/^🔁\s*/, '')
-    .replace(/\[もとの日程:[^\]]+\]\s*/g, '');
+    .replace(/^🔁\s*/, '');
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -319,7 +275,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" 
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center space-x-2 truncate flex-1 mr-2">
             <label className="flex items-center cursor-pointer select-none flex-shrink-0" title="重要マーク(★)を切り替え">
@@ -356,9 +311,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           </div>
         </div>
 
-        {/* コンテンツボディ */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* 編集モード時のフォーム */}
           {isEditing ? (
             <form onSubmit={handleSaveBasicInfo} className="bg-blue-50/50 p-4 rounded-lg border border-blue-200 space-y-3">
               <h3 className="text-xs font-bold text-blue-900">予定情報の編集</h3>
@@ -493,14 +446,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {/* 新規作成された日延べカードに「もとの日程」を表示（用品到着済みの下あたり） */}
-              {originalDateTextFromNewTitle && (
-                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
-                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
-                  <span>もとの日程: {originalDateTextFromNewTitle}</span>
-                </div>
-              )}
-
               {formattedPostpone && (
                 <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
                   <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
@@ -510,7 +455,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </div>
           )}
 
-          {/* ステータスと各種アクションボタン */}
           <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
             <button
               onClick={handleToggleComplete}
@@ -549,7 +493,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </button>
           </div>
 
-          {/* 日延べ選択フォーム */}
           {showPostponeForm && !isPostponedUndecided && (
             <form onSubmit={handleConfirmPostpone} className="bg-amber-50/60 p-4 rounded-lg border border-amber-200 space-y-3">
               <h4 className="text-xs font-bold text-amber-900">日延べの処理を選択</h4>
@@ -617,17 +560,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </form>
           )}
 
-          {/* メモ欄 & kWドロップダウン & 作業内容・日報欄 */}
           <div className="space-y-4 pt-2 border-t border-gray-100">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-bold text-gray-700">メモ欄</label>
-                {/* kWクイック選択用ドロップダウン */}
                 <select
                   onChange={(e) => {
                     if (e.target.value) {
                       handleSelectKw(e.target.value);
-                      e.target.value = ""; // 選択後にリセット
+                      e.target.value = "";
                     }
                   }}
                   defaultValue=""
