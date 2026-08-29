@@ -130,13 +130,18 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // タイトルから「日延未定」の文字を自動削除する処理
+    // 「日延未定」の文字を削除し、先頭に「🔁」を付与する処理
     let updatedTitle = targetEvent.title || '';
     if (updatedTitle.includes('日延未定')) {
       updatedTitle = updatedTitle
         .replace(/日延未定/g, '')
         .replace(/\s+/g, ' ')
         .trim();
+    }
+    
+    // すでに「🔁」がついていなければ先頭につける
+    if (!updatedTitle.startsWith('🔁')) {
+      updatedTitle = `🔁${updatedTitle}`;
     }
 
     const { error } = await supabase.from('events').update({
@@ -283,7 +288,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
               };
             });
 
-            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - a.startMin));
+            parsedEvents.sort((a, b) => a.startMin - b.startMin || (b.endMin - b.startMin) - (a.endMin - b.endMin));
 
             const tempPositionedEvents: Omit<PositionedEvent, 'totalCols'>[] = [];
             const columns: ParsedEvent[][] = [];
