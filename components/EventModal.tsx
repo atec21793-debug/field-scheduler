@@ -127,6 +127,21 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
 
+    // もとの日付を分かりやすい形式（例: 8月27日 09:00）にするヘルパー
+    const formatOriginalDateString = (dateStr?: string | null, startStr?: string | null) => {
+      if (!dateStr) return '';
+      const parts = dateStr.split(/[-/]/);
+      if (parts.length >= 3) {
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        const timePart = startStr ? ` ${startStr}` : '';
+        return `${m}月${d}日${timePart}`;
+      }
+      return dateStr;
+    };
+
+    const originalDateText = formatOriginalDateString(event.date, event.start_time);
+
     if (postponeType === 'undecided') {
       let newTitle = `日延未定 ${cleanTitle}`.trim();
       if (isStarred) newTitle = `★ ${newTitle}`;
@@ -157,9 +172,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
-      // 新規作成カードのタイトルに元の日付を入れない（そのままクリーンなタイトルを使用）
+      // タイトルには元の日付を入れず、メモ欄などに元の日程情報を保存する（またはタイトル以外の専用カラム等がないため、タイトルに非表示タグとして埋め込むか、今回はタイトルを汚さないためにメモ欄に自動追記する形にする）
+      // タイトル自体はシンプルなまま作成
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
+
+      // メモ欄にもとの日程を自動で引き継ぎ/保持させる
+      const originalMemoNote = `[もとの日程: ${originalDateText}]`;
+      const combinedMemo = event.memo 
+        ? `${event.memo}\n${originalMemoNote}` 
+        : originalMemoNote;
 
       const { error: insertError } = await supabase.from('events').insert([
         {
@@ -170,7 +192,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           end_time: newEndTimeStr,
           address: event.address,
           color: event.color,
-          memo: event.memo,
+          memo: combinedMemo,
           report: event.report,
           status: 'active',
           ordered: isOrdered,
@@ -249,6 +271,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
+
+  // メモ欄などから「[もとの日程: ...]」の記述を抽出するヘルパー
+  const extractOriginalDateFromMemo = (memoStr: string) => {
+    const match = memoStr.match(/\[もとの日程:\s*([^\]]+)\]/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    return null;
+  };
+  const originalDateFromMemo = extractOriginalDateFromMemo(event.memo || '');
 
   const formatPostponedInfo = (titleStr: string) => {
     const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
@@ -443,6 +475,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
                     <span>商品到着済み</span>
                   </span>
+                </div>
+              )}
+
+              {/* 新規作成カードの詳細内に元の日付を表示 */}
+              {originalDateFromMemo && (
+                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
+                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
+                  <span>もとの日程: {originalDateFromMemo}</span>
                 </div>
               )}
 
