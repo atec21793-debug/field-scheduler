@@ -376,12 +376,12 @@ export default function OutsourcingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">メモ・詳細</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">内訳</label>
                   <textarea
                     value={memo}
                     onChange={(e) => setMemo(e.target.value)}
                     rows={3}
-                    placeholder="作業の注意点やメモなどを入力..."
+                    placeholder=""
                     className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none resize-none"
                   />
                 </div>
