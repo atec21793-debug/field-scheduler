@@ -186,9 +186,9 @@ export default function OutsourcingPage() {
               className="flex items-center space-x-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 transition"
             >
               <ArrowLeft size={16} />
-              <span>カレンダーへ戻る</span>
+              <span>戻る</span>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">業務委託管理</h1>
+            <h1 className="text-2xl font-bold text-gray-800">業務委託</h1>
           </div>
           <button
             onClick={handleOpenCreateModal}
