@@ -130,11 +130,21 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
+    // タイトルから「日延未定」の文字を自動削除する処理
+    let updatedTitle = targetEvent.title || '';
+    if (updatedTitle.includes('日延未定')) {
+      updatedTitle = updatedTitle
+        .replace(/日延未定/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
     const { error } = await supabase.from('events').update({
       date: targetDateStr,
       start_time: newStartTime,
       end_time: newEndTime,
       time: newTimeString,
+      title: updatedTitle,
     }).eq('id', eventId);
 
     if (!error && onUpdate) {
@@ -199,13 +209,13 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
             );
             
             const todayStr = new Intl.DateTimeFormat('ja-JP', {
-  timeZone: 'Asia/Tokyo',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-}).format(new Date()).split('/').map(num => num.padStart(2, '0')).join('-');
+              timeZone: 'Asia/Tokyo',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            }).format(new Date()).split('/').map(num => num.padStart(2, '0')).join('-');
 
-const isToday = headerDateStr === todayStr;
+            const isToday = headerDateStr === todayStr;
 
             return (
               <div 
