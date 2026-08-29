@@ -204,7 +204,7 @@ export default function OutsourcingPage() {
           </div>
         </div>
 
-        {/* リスト部分（カードクリックで編集可能に） */}
+        {/* リスト部分（カードクリックで編集モーダルが開く） */}
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 text-center text-gray-400 text-xs border border-gray-100 shadow-sm">
@@ -218,7 +218,7 @@ export default function OutsourcingPage() {
                 className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-blue-300 hover:shadow-md transition cursor-pointer space-y-2.5"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 pointer-events-none">
                     <span
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color || '#4b5563' }}
@@ -233,6 +233,7 @@ export default function OutsourcingPage() {
 
                   <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
+                      type="button"
                       onClick={() => handleOpenEditModal(item)}
                       className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       title="編集"
@@ -240,6 +241,7 @@ export default function OutsourcingPage() {
                       <Edit2 size={15} />
                     </button>
                     <button
+                      type="button"
                       onClick={(e) => handleDeleteItem(item.id, e)}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="削除"
@@ -249,7 +251,7 @@ export default function OutsourcingPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 pt-1 border-t border-gray-50">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 pt-1 border-t border-gray-50 pointer-events-none">
                   {item.date && (
                     <span className="flex items-center space-x-1">
                       <CalendarIcon size={13} className="text-gray-400" />
@@ -271,7 +273,7 @@ export default function OutsourcingPage() {
                 </div>
 
                 {item.memo && (
-                  <div className="text-xs bg-gray-50 text-gray-600 p-2.5 rounded-xl border border-gray-100 flex items-start space-x-2 mt-2">
+                  <div className="text-xs bg-gray-50 text-gray-600 p-2.5 rounded-xl border border-gray-100 flex items-start space-x-2 mt-2 pointer-events-none">
                     <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
                     <p className="whitespace-pre-wrap leading-relaxed">{item.memo}</p>
                   </div>
@@ -284,7 +286,7 @@ export default function OutsourcingPage() {
         {/* モーダル */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
                 <h3 className="text-base font-bold text-gray-800">
                   {editingId ? '業務委託の編集' : '新規業務委託の登録'}
