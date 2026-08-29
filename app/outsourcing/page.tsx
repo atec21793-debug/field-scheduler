@@ -18,7 +18,7 @@ interface OutsourcingItem {
 export default function OutsourcingPage() {
   const [items, setItems] = useState<OutsourcingItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null); // 編集中のID
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [contractor, setContractor] = useState('');
   const [title, setTitle] = useState('');
@@ -73,7 +73,6 @@ export default function OutsourcingPage() {
     fetchOutsourcingData();
   }, []);
 
-  // 新規登録モーダルを開く
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setContractor('');
@@ -87,12 +86,10 @@ export default function OutsourcingPage() {
     setIsModalOpen(true);
   };
 
-  // 編集モーダルを開く
   const handleOpenEditModal = (item: OutsourcingItem) => {
     setEditingId(item.id);
     setContractor(item.contractor || '');
     
-    // タイトルに「🈳」が含まれているかチェックして分離
     const titleVal = item.title || '';
     if (titleVal.startsWith('🈳')) {
       setIsVacant(true);
@@ -104,7 +101,6 @@ export default function OutsourcingPage() {
 
     setDate(item.date || '');
 
-    // 時間のパース (例: "09:00 - 10:00")
     if (item.time && item.time.includes('-')) {
       const parts = item.time.split('-').map((s) => s.trim());
       setStartTime(parts[0] || '09:00');
@@ -127,7 +123,6 @@ export default function OutsourcingPage() {
     const timeValue = startTime && endTime ? `${startTime} - ${endTime}` : null;
 
     if (editingId) {
-      // 既存データの更新（編集）
       const { error } = await supabase
         .from('outsourcing_events')
         .update({
@@ -143,11 +138,8 @@ export default function OutsourcingPage() {
       if (!error) {
         setIsModalOpen(false);
         fetchOutsourcingData();
-      } else {
-        console.error('Error updating outsourcing event:', error);
       }
     } else {
-      // 新規登録
       const { error } = await supabase.from('outsourcing_events').insert([
         {
           contractor: contractor.trim() ? contractor : null,
@@ -162,8 +154,6 @@ export default function OutsourcingPage() {
       if (!error) {
         setIsModalOpen(false);
         fetchOutsourcingData();
-      } else {
-        console.error('Error inserting outsourcing event:', error);
       }
     }
   };
@@ -177,105 +167,111 @@ export default function OutsourcingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-2xl mx-auto space-y-4">
+        
+        {/* 未発注リスト風のヘッダーカード */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Link
               href="/"
-              className="flex items-center space-x-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 transition"
+              className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition"
+              aria-label="戻る"
             >
-              <ArrowLeft size={16} />
-              <span>戻る</span>
+              <ArrowLeft size={18} />
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">業務委託</h1>
+            <h1 className="text-lg font-bold text-gray-800">業務委託</h1>
           </div>
-          <button
-            onClick={handleOpenCreateModal}
-            className="flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition shadow-sm"
-          >
-            <Plus size={16} />
-            <span>新規登録</span>
-          </button>
+          
+          <div className="flex items-center space-x-3">
+            <span className="text-xs bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-semibold border border-amber-200">
+              登録: {items.length}件
+            </span>
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center space-x-1 px-3.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition shadow-sm"
+            >
+              <Plus size={15} />
+              <span>新規登録</span>
+            </button>
+          </div>
         </div>
 
+        {/* リスト部分 */}
         <div className="space-y-3">
-          <div className="text-sm font-medium text-gray-600 px-1">
-            登録済みリスト ({items.length}件)
-          </div>
-
           {items.length === 0 ? (
-            <div className="bg-white rounded-lg p-8 text-center text-gray-500 text-sm border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-2xl p-8 text-center text-gray-400 text-xs border border-gray-100 shadow-sm">
               業務委託の登録はありません。
             </div>
           ) : (
             items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm flex items-center justify-between hover:border-gray-300 transition"
+                className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-gray-200 transition space-y-2.5"
               >
-                <div className="space-y-1.5">
+                <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
                     <span
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color || '#4b5563' }}
                     />
                     {item.contractor && (
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium border border-gray-200">
+                      <span className="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium border border-gray-200">
                         {item.contractor}
                       </span>
                     )}
-                    <span className="text-gray-900 font-semibold text-sm">{item.title}</span>
+                    <span className="text-gray-900 font-bold text-sm">{item.title}</span>
                   </div>
 
-                  <div className="flex items-center space-x-4 text-xs text-gray-500">
-                    {item.date && (
-                      <span className="flex items-center space-x-1">
-                        <CalendarIcon size={13} className="text-gray-400" />
-                        <span>{item.date}</span>
-                      </span>
-                    )}
-                    {item.time && (
-                      <span className="flex items-center space-x-1">
-                        <Clock size={13} className="text-gray-400" />
-                        <span>{item.time}</span>
-                      </span>
-                    )}
-                    {item.address && (
-                      <span className="flex items-center space-x-1">
-                        <MapPin size={13} className="text-gray-400" />
-                        <span>{item.address}</span>
-                      </span>
-                    )}
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      onClick={() => handleOpenEditModal(item)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      title="編集"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      title="削除"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleOpenEditModal(item)}
-                    className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-md transition flex items-center space-x-1"
-                  >
-                    <Edit2 size={12} />
-                    <span>編集</span>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-medium rounded-md transition flex items-center space-x-1"
-                  >
-                    <Trash2 size={12} />
-                    <span>削除</span>
-                  </button>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 pt-1 border-t border-gray-50">
+                  {item.date && (
+                    <span className="flex items-center space-x-1">
+                      <CalendarIcon size={13} className="text-gray-400" />
+                      <span>{item.date}</span>
+                    </span>
+                  )}
+                  {item.time && (
+                    <span className="flex items-center space-x-1">
+                      <Clock size={13} className="text-gray-400" />
+                      <span>{item.time}</span>
+                    </span>
+                  )}
+                  {item.address && (
+                    <span className="flex items-center space-x-1">
+                      <MapPin size={13} className="text-gray-400" />
+                      <span>{item.address}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             ))
           )}
         </div>
 
+        {/* モーダル部分は変更なし */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-800">
+                <h3 className="text-base font-bold text-gray-800">
                   {editingId ? '業務委託の編集' : '新規業務委託の登録'}
                 </h3>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="p-1 rounded-full hover:bg-gray-100 text-gray-500">
@@ -290,7 +286,7 @@ export default function OutsourcingPage() {
                     value={contractor}
                     onChange={(e) => setContractor(e.target.value)}
                     placeholder="例: 株式会社○○"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                   />
                 </div>
 
@@ -302,7 +298,7 @@ export default function OutsourcingPage() {
                     onChange={(e) => setTitle(e.target.value)}
                     required
                     placeholder="例: ○○様邸 現場施工"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                   />
                 </div>
 
@@ -315,16 +311,16 @@ export default function OutsourcingPage() {
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
                   <label htmlFor="vacant-checkbox" className="text-xs font-semibold text-gray-600 cursor-pointer">
-                    空室
+                    空室に設定
                   </label>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-gray-600">予定日（未定にする場合は空欄のままでOK）</label>
+                    <label className="block text-xs font-semibold text-gray-600">予定日</label>
                     {date && (
-                      <button type="button" onClick={() => setDate('')} className="text-[10px] text-blue-600 hover:underline">
-                        日付をクリア
+                      <button type="button" onClick={() => setDate('')} className="text-[11px] text-blue-600 hover:underline">
+                        クリア
                       </button>
                     )}
                   </div>
@@ -332,20 +328,20 @@ export default function OutsourcingPage() {
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center"><Clock size={14} className="mr-1" />開始時間</label>
-                    <select value={startTime} onChange={(e) => handleStartTimeChange(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">開始時間</label>
+                    <select value={startTime} onChange={(e) => handleStartTimeChange(e.target.value)} className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm">
                       {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center"><Clock size={14} className="mr-1" />終了時間</label>
-                    <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">終了時間</label>
+                    <select value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm">
                       {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
@@ -358,7 +354,7 @@ export default function OutsourcingPage() {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="例: 東京都新宿区..."
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                   />
                 </div>
 
@@ -369,7 +365,6 @@ export default function OutsourcingPage() {
                       <button
                         key={c.value}
                         type="button"
-                        title={c.label}
                         style={{ backgroundColor: c.value }}
                         onClick={() => setColor(c.value)}
                         className={`w-7 h-7 rounded-full transition ${color === c.value ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : 'opacity-70 hover:opacity-100'}`}
@@ -379,8 +374,8 @@ export default function OutsourcingPage() {
                 </div>
 
                 <div className="flex space-x-2 pt-4">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm">キャンセル</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50">キャンセル</button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 shadow-sm">
                     {editingId ? '更新する' : '登録する'}
                   </button>
                 </div>
@@ -388,6 +383,7 @@ export default function OutsourcingPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
