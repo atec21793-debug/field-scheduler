@@ -139,6 +139,21 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
 
+    // もとの日付を「8月27日」のような分かりやすい形式にフォーマットする
+    const formatOriginalDateString = (dateStr?: string | null, startStr?: string | null) => {
+      if (!dateStr) return '';
+      const parts = dateStr.split(/[-/]/);
+      if (parts.length >= 3) {
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        const timePart = startStr ? ` ${startStr}` : '';
+        return `${m}月${d}日${timePart}`;
+      }
+      return dateStr;
+    };
+
+    const originalDateText = formatOriginalDateString(event.date, event.start_time);
+
     if (postponeType === 'undecided') {
       let newTitle = `日延未定 ${cleanTitle}`.trim();
       if (isStarred) newTitle = `★ ${newTitle}`;
@@ -190,7 +205,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      let originalTitleWithPostpone = `日延べ (${newPostponeDate} ${newStartTimeStr} 〜 ${newEndTimeStr}) ${cleanTitle}`.trim();
+      // 元のカードに「日延べ（もとの日程: 8月27日 など）」を保持させる
+      let originalTitleWithPostpone = `日延べ (${originalDateText}) ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
       const { error: updateError } = await supabase
@@ -214,6 +230,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/^★\s*/, '')
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
+      .replace(/^日延べ\s*\([^)]*\)\s*/, '')
       .replace(/^日延べ\s*/, '')
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
@@ -266,6 +283,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('('));
 
+  // タイトルに含まれる「もとの日程（カッコ内）」を抽出
+  const extractOriginalDateFromTitle = (titleStr: string) => {
+    const match = titleStr.match(/日延べ\s*\(([^)]+)\)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    return null;
+  };
+  const originalDateTextFromTitle = extractOriginalDateFromTitle(titleStr);
+
   const formatPostponedInfo = (titleStr: string) => {
     const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
     if (match) {
@@ -281,7 +308,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
 
   const formattedPostpone = formatPostponedInfo(event.title || '');
-  const displayTitle = (event.title || '').replace(/^★\s*/, '');
+  const displayTitle = (event.title || '')
+    .replace(/^★\s*/, '')
+    .replace(/^日延べ\s*\([^)]*\)\s*/, '');
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -460,6 +489,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
                     <span>商品到着済み</span>
                   </span>
+                </div>
+              )}
+
+              {/* もとの日程の表示（用品到着済みの下） */}
+              {originalDateTextFromTitle && (
+                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
+                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
+                  <span>もとの日程: {originalDateTextFromTitle}</span>
                 </div>
               )}
 
