@@ -44,7 +44,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
-  // 画像プレビュー拡大表示用モーダルの状態
   const [showImagePreview, setShowImagePreview] = useState(false);
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,38 +90,35 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // 画像ファイル選択時の処理（Base64変換して即座に保存）
+  // ファイル（画像またはPDF）選択時の処理
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = async (uploadEvent) => {
-      const base64Image = uploadEvent.target?.result as string;
-      if (!base64Image) return;
+      const fileDataUri = uploadEvent.target?.result as string;
+      if (!fileDataUri) return;
 
-      setImageUrl(base64Image);
+      setImageUrl(fileDataUri);
       
-      // Supabaseへ即座に保存
       const { error } = await supabase
         .from('events')
-        .update({ image_url: base64Image })
+        .update({ image_url: fileDataUri })
         .eq('id', event.id);
 
       if (!error) {
-        event.image_url = base64Image;
+        event.image_url = fileDataUri;
         onUpdate();
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // 依頼書ボタンクリック時の動作
   const handleIraisyoClick = () => {
     if (imageUrl) {
       setShowImagePreview(true);
     } else {
-      // 画像がない場合はファイル選択ダイアログを開く
       document.getElementById('iraisyo-file-input')?.click();
     }
   };
@@ -337,13 +333,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     .replace(/^★\s*/, '')
     .replace(/^🔁\s*/, '');
 
+  // 登録されたデータがPDFかどうかを判定
+  const isPdf = imageUrl.startsWith('data:application/pdf') || imageUrl.toLowerCase().includes('.pdf');
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
         className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" 
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ヘッダー部分 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center space-x-2 truncate flex-1 mr-2">
             <label className="flex items-center cursor-pointer select-none flex-shrink-0" title="重要マーク(★)を切り替え">
@@ -362,16 +360,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           </div>
 
           <div className="flex items-center space-x-1.5 flex-shrink-0">
-            {/* 非表示のファイルアップロード用インプット */}
+            {/* 画像およびPDF対応のファイル選択インプット */}
             <input 
               type="file" 
               id="iraisyo-file-input" 
-              accept="image/*" 
+              accept="image/*,application/pdf" 
               className="hidden" 
               onChange={handleImageUpload} 
             />
 
-            {/* 依頼書ボタン（画像有無でスタイルやバッジを変更） */}
             <button
               onClick={handleIraisyoClick}
               className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
@@ -379,7 +376,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' 
                   : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
               }`}
-              title={imageUrl ? "依頼書画像を表示" : "依頼書画像を添付"}
+              title={imageUrl ? "依頼書を表示" : "依頼書を添付"}
             >
               <FileText size={15} className={imageUrl ? "text-emerald-600" : "text-gray-500"} />
               <span>依頼書</span>
@@ -433,14 +430,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </label>
               </div>
 
-              {/* 編集画面からの画像変更・追加 */}
               <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">依頼書画像</label>
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">依頼書（画像・PDF）</label>
                 <div className="flex items-center space-x-2">
                   <label className="cursor-pointer px-3 py-1.5 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 flex items-center space-x-1">
                     <Upload size={14} />
-                    <span>画像を選択・変更</span>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <span>ファイルを選択・変更</span>
+                    <input type="file" accept="image/*,application/pdf" onChange={handleImageUpload} className="hidden" />
                   </label>
                   {imageUrl && <span className="text-xs text-emerald-600 font-medium">✓ 添付済み</span>}
                 </div>
@@ -719,16 +715,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         </div>
       </div>
 
-      {/* 依頼書画像プレビュー用サブモーダル */}
+      {/* 依頼書プレビュー用モーダル（PDFまたは画像で動的に切り替え） */}
       {showImagePreview && imageUrl && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4" onClick={() => setShowImagePreview(false)}>
-          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden p-2" onClick={(e) => e.stopPropagation()}>
+          <div className="relative w-full max-w-4xl h-[85vh] bg-white rounded-lg overflow-hidden flex flex-col p-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center pb-2 px-2 border-b">
-              <span className="text-xs font-bold text-gray-700">依頼書プレビュー</span>
+              <span className="text-xs font-bold text-gray-700">依頼書プレビュー ({isPdf ? 'PDF' : '画像'})</span>
               <div className="flex items-center space-x-2">
                 <label className="cursor-pointer px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs text-gray-700">
-                  画像を変更
-                  <input type="file" accept="image/*" onChange={(e) => { handleImageUpload(e); }} className="hidden" />
+                  ファイルを変更
+                  <input type="file" accept="image/*,application/pdf" onChange={(e) => { handleImageUpload(e); }} className="hidden" />
                 </label>
                 <button 
                   onClick={() => setShowImagePreview(false)}
@@ -738,8 +734,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </button>
               </div>
             </div>
-            <div className="p-2 flex justify-center overflow-auto max-h-[80vh]">
-              <img src={imageUrl} alt="依頼書" className="max-w-full object-contain rounded" />
+            <div className="flex-1 p-2 flex justify-center items-center overflow-auto bg-gray-50">
+              {isPdf ? (
+                <iframe src={imageUrl} title="依頼書PDF" className="w-full h-full rounded border border-gray-300 bg-white" />
+              ) : (
+                <img src={imageUrl} alt="依頼書画像" className="max-w-full max-h-full object-contain rounded" />
+              )}
             </div>
           </div>
         </div>
