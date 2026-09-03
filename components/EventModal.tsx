@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ShoppingCart, FileText, Upload } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ShoppingCart } from 'lucide-react';
 
 interface EventModalProps {
-  event: EventItem & { ordered?: boolean; image_url?: string };
+  event: EventItem & { ordered?: boolean };
   onClose: () => void;
   onUpdate: () => void;
 }
@@ -33,7 +33,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
   const [isOrdered, setIsOrdered] = useState(event.ordered || false);
-  const [imageUrl, setImageUrl] = useState(event.image_url || '');
 
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
@@ -43,8 +42,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('undecided');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
-
-  const [showImagePreview, setShowImagePreview] = useState(false);
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
@@ -90,39 +87,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // ファイル（画像またはPDF）選択時の処理
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (uploadEvent) => {
-      const fileDataUri = uploadEvent.target?.result as string;
-      if (!fileDataUri) return;
-
-      setImageUrl(fileDataUri);
-      
-      const { error } = await supabase
-        .from('events')
-        .update({ image_url: fileDataUri })
-        .eq('id', event.id);
-
-      if (!error) {
-        event.image_url = fileDataUri;
-        onUpdate();
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleIraisyoClick = () => {
-    if (imageUrl) {
-      setShowImagePreview(true);
-    } else {
-      document.getElementById('iraisyo-file-input')?.click();
-    }
-  };
-
   const handleSaveBasicInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -163,6 +127,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
 
+    // もとの日付を分かりやすい形式（例: 8月27日 09:00）にするヘルパー
     const formatOriginalDateString = (dateStr?: string | null, startStr?: string | null) => {
       if (!dateStr) return '';
       const parts = dateStr.split(/[-/]/);
@@ -207,9 +172,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
+      // タイトルには元の日付を入れず、メモ欄などに元の日程情報を保存する（またはタイトル以外の専用カラム等がないため、タイトルに非表示タグとして埋め込むか、今回はタイトルを汚さないためにメモ欄に自動追記する形にする）
+      // タイトル自体はシンプルなまま作成
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
+      // メモ欄にもとの日程を自動で引き継ぎ/保持させる
       const originalMemoNote = `[もとの日程: ${originalDateText}]`;
       const combinedMemo = event.memo 
         ? `${event.memo}\n${originalMemoNote}` 
@@ -228,7 +196,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           report: event.report,
           status: 'active',
           ordered: isOrdered,
-          image_url: imageUrl,
         },
       ]);
 
@@ -305,6 +272,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
 
+  // メモ欄などから「[もとの日程: ...]」の記述を抽出するヘルパー
   const extractOriginalDateFromMemo = (memoStr: string) => {
     const match = memoStr.match(/\[もとの日程:\s*([^\]]+)\]/);
     if (match && match[1]) {
@@ -333,9 +301,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     .replace(/^★\s*/, '')
     .replace(/^🔁\s*/, '');
 
-  // 登録されたデータがPDFかどうかを判定
-  const isPdf = imageUrl.startsWith('data:application/pdf') || imageUrl.toLowerCase().includes('.pdf');
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
@@ -359,30 +324,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
             </h2>
           </div>
 
-          <div className="flex items-center space-x-1.5 flex-shrink-0">
-            {/* 画像およびPDF対応のファイル選択インプット */}
-            <input 
-              type="file" 
-              id="iraisyo-file-input" 
-              accept="image/*,application/pdf" 
-              className="hidden" 
-              onChange={handleImageUpload} 
-            />
-
-            <button
-              onClick={handleIraisyoClick}
-              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                imageUrl 
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' 
-                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-              }`}
-              title={imageUrl ? "依頼書を表示" : "依頼書を添付"}
-            >
-              <FileText size={15} className={imageUrl ? "text-emerald-600" : "text-gray-500"} />
-              <span>依頼書</span>
-              {imageUrl && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
-            </button>
-
+          <div className="flex items-center space-x-1 flex-shrink-0">
             {!isEditing && (
               <button 
                 onClick={() => setIsEditing(true)}
@@ -428,18 +370,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   <ShoppingCart size={14} className="text-indigo-600" />
                   <span>商品発注済み・支給</span>
                 </label>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">依頼書（画像・PDF）</label>
-                <div className="flex items-center space-x-2">
-                  <label className="cursor-pointer px-3 py-1.5 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 flex items-center space-x-1">
-                    <Upload size={14} />
-                    <span>ファイルを選択・変更</span>
-                    <input type="file" accept="image/*,application/pdf" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                  {imageUrl && <span className="text-xs text-emerald-600 font-medium">✓ 添付済み</span>}
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -548,6 +478,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
+              {/* 新規作成カードの詳細内に元の日付を表示 */}
               {originalDateFromMemo && (
                 <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
                   <Clock size={14} className="text-gray-400 flex-shrink-0" />
@@ -714,36 +645,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           </div>
         </div>
       </div>
-
-      {/* 依頼書プレビュー用モーダル（PDFまたは画像で動的に切り替え） */}
-      {showImagePreview && imageUrl && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4" onClick={() => setShowImagePreview(false)}>
-          <div className="relative w-full max-w-4xl h-[85vh] bg-white rounded-lg overflow-hidden flex flex-col p-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center pb-2 px-2 border-b">
-              <span className="text-xs font-bold text-gray-700">依頼書プレビュー ({isPdf ? 'PDF' : '画像'})</span>
-              <div className="flex items-center space-x-2">
-                <label className="cursor-pointer px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs text-gray-700">
-                  ファイルを変更
-                  <input type="file" accept="image/*,application/pdf" onChange={(e) => { handleImageUpload(e); }} className="hidden" />
-                </label>
-                <button 
-                  onClick={() => setShowImagePreview(false)}
-                  className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 p-2 flex justify-center items-center overflow-auto bg-gray-50">
-              {isPdf ? (
-                <iframe src={imageUrl} title="依頼書PDF" className="w-full h-full rounded border border-gray-300 bg-white" />
-              ) : (
-                <img src={imageUrl} alt="依頼書画像" className="max-w-full max-h-full object-contain rounded" />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
