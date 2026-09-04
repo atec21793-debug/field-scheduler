@@ -12,7 +12,7 @@ export default function NoAddressListPage() {
   // 各カードごとの入力中住所を管理するステート
   const [addressInputs, setAddressInputs] = useState<{ [key: string]: string }>({});
 
-  // 今日以降で住所が未入力のデータを取得（不要なカードを除外）
+  // 今日以降の予定、または日付が未定のデータを取得（不要なカードを除外）
   const fetchNoAddressEvents = async () => {
     setLoading(true);
 
@@ -23,11 +23,11 @@ export default function NoAddressListPage() {
       .from('events')
       .select('*')
       .or('address.is.null,address.eq.""') // 住所が未入力
-      .gte('date', todayStr) // 今日以降の予定に限定
       .not('title', 'ilike', '%休み%')
       .not('title', 'ilike', '%🎌%')
-      
-      .order('date', { ascending: true });
+      // 「今日以降」または「日付がnull/空欄（未定）」の条件を追加
+      .or(`date.gte.${todayStr},date.is.null,date.eq.""`)
+      .order('date', { ascending: true, nullsFirst: true });
 
     const { data, error } = await query;
 
@@ -111,7 +111,7 @@ export default function NoAddressListPage() {
                     {/* カレンダーアイコン付きの日付表示 */}
                     <div className="flex items-center space-x-1 text-xs text-gray-500 font-medium">
                       <Calendar size={14} className="text-blue-500 flex-shrink-0" />
-                      <span>{event.date} {event.start_time ? `(${event.start_time})` : ''}</span>
+                      <span>{event.date ? `${event.date} ${event.start_time ? `(${event.start_time})` : ''}` : '日付未定'}</span>
                     </div>
                   </div>
 
