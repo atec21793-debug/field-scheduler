@@ -34,7 +34,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
   const [isOrdered, setIsOrdered] = useState(event.ordered || false);
   
-  // 複数画像対応（カンマ区切りまたは配列として管理）
   const parseImages = (urlStr?: string | null): string[] => {
     if (!urlStr) return [];
     if (urlStr.startsWith('[')) {
@@ -110,7 +109,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newImages = [...images];
+    // 現在の images 配列をベースにする
+    const updatedImages = [...images];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -119,7 +119,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         reader.onload = (uploadEvent) => {
           const base64Image = uploadEvent.target?.result as string;
           if (base64Image) {
-            newImages.push(base64Image);
+            updatedImages.push(base64Image);
           }
           resolve();
         };
@@ -127,8 +127,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       });
     }
 
-    const imagesJson = JSON.stringify(newImages);
-    setImages(newImages);
+    const imagesJson = JSON.stringify(updatedImages);
+    setImages(updatedImages);
     
     const { error } = await supabase
       .from('events')
