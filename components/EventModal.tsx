@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ShoppingCart, FileText, Upload } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart, FileText, Upload } from 'lucide-react';
 
 interface EventModalProps {
   event: EventItem & { ordered?: boolean; image_url?: string; allEvents?: EventItem[] };
@@ -44,7 +44,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
-  // 画像プレビュー拡大表示用モーダルの状態
   const [showImagePreview, setShowImagePreview] = useState(false);
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +90,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // 画像ファイル選択時の処理（Base64変換して即座に保存）
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -193,10 +191,10 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
+      // 新日程側には「🔁 案件名」または元のタイトルを元に作成
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
-      // 新日程の予定を新規作成
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -216,6 +214,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
+      // 元の予定には「日延べ 案件名」をつけて完了状態にする
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
@@ -286,19 +285,18 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
+  const isNewScheduleCard = titleStr.includes('🔁');
 
-  // タイトルに「日延べ」や「🔁」などがついていても、純粋な案件名（ベース名）を抽出してマッチングする
+  const baseCleanTitle = titleStr
+    .replace(/^★\s*/, '')
+    .replace(/^🔁\s*/, '')
+    .replace(/^日延未定\s*/, '')
+    .replace(/^日延べ\s*/, '')
+    .trim();
+
+  // 1. 元の予定から見た「新日程」を探す（タイトルが「日延べ」等になっているもの、または「🔁」がついた同じ名前の別の日付の予定）
   const findLinkedNewSchedule = () => {
-    if (!event.allEvents) return null;
-    const baseCleanTitle = titleStr
-      .replace(/^★\s*/, '')
-      .replace(/^🔁\s*/, '')
-      .replace(/^日延未定\s*/, '')
-      .replace(/^日延べ\s*/, '')
-      .trim();
-
-    if (!baseCleanTitle) return null;
-
+    if (!event.allEvents || !baseCleanTitle) return null;
     const matchEvent = event.allEvents.find((e) => {
       if (e.id === event.id) return false;
       const eCleanTitle = (e.title || '')
@@ -307,7 +305,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         .replace(/^日延未定\s*/, '')
         .replace(/^日延べ\s*/, '')
         .trim();
-      return eCleanTitle === baseCleanTitle;
+      return eCleanTitle === baseCleanTitle && e.date !== event.date;
     });
 
     if (matchEvent && matchEvent.date) {
@@ -319,9 +317,33 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return null;
   };
 
-  const linkedNewScheduleText = findLinkedNewSchedule();
+  // 2. 新日程（🔁）から見た「元の日程」を探す（同じベースタイトルを持ち、過去または「日延べ」とついている予定）
+  const findLinkedOldSchedule = () => {
+    if (!event.allEvents || !baseCleanTitle) return null;
+    const matchEvent = event.allEvents.find((e) => {
+      if (e.id === event.id) return false;
+      const eTitle = e.title || '';
+      const eCleanTitle = eTitle
+        .replace(/^★\s*/, '')
+        .replace(/^🔁\s*/, '')
+        .replace(/^日延未定\s*/, '')
+        .replace(/^日延べ\s*/, '')
+        .trim();
+      return eCleanTitle === baseCleanTitle && (eTitle.includes('日延べ') || e.date !== event.date);
+    });
 
-  const displayTitle = (event.title || '')
+    if (matchEvent && matchEvent.date) {
+      const parts = matchEvent.date.split(/[-/]/);
+      const dateText = parts.length >= 3 ? `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日` : matchEvent.date;
+      return `${dateText}`;
+    }
+    return null;
+  };
+
+  const linkedNewScheduleText = findLinkedNewSchedule();
+  const linkedOldScheduleText = findLinkedOldSchedule();
+
+  const displayTitle = titleStr
     .replace(/^★\s*/, '')
     .replace(/^🔁\s*/, '');
 
@@ -528,23 +550,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {isOrdered && (
-                <div className="space-y-1.5 pt-0.5">
-                  <div className="flex items-center space-x-1.5">
-                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
-                      <span>商品到着済み</span>
-                    </span>
-                  </div>
-                  {linkedNewScheduleText && (
-                    <div className="flex items-center space-x-1.5 text-amber-700 font-semibold text-xs pt-1">
-                      <ArrowRight size={14} className="text-amber-500 flex-shrink-0" />
-                      <span>新日程: {linkedNewScheduleText}</span>
-                    </div>
-                  )}
+              {/* 新日程のカードを開いたときは「元の日程」を表示 */}
+              {isNewScheduleCard && linkedOldScheduleText && (
+                <div className="flex items-center space-x-1.5 text-blue-700 font-semibold text-xs pt-1">
+                  <ArrowLeft size={14} className="text-blue-500 flex-shrink-0" />
+                  <span>元の日程: {linkedOldScheduleText}</span>
                 </div>
               )}
 
-              {!isOrdered && linkedNewScheduleText && (
+              {/* 元の予定のカードを開いたときは「新日程」を表示 */}
+              {!isNewScheduleCard && linkedNewScheduleText && (
                 <div className="flex items-center space-x-1.5 text-amber-700 font-semibold text-xs pt-1">
                   <ArrowRight size={14} className="text-amber-500 flex-shrink-0" />
                   <span>新日程: {linkedNewScheduleText}</span>
