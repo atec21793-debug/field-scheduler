@@ -352,7 +352,11 @@ export default function Home() {
       </div>
 
       {isModalOpen && selectedEvent && (
-        <EventModal event={selectedEvent} onClose={() => setIsModalOpen(false)} onUpdate={fetchEvents} />
+        <EventModal 
+          event={{ ...selectedEvent, allEvents: events }} 
+          onClose={() => setIsModalOpen(false)} 
+          onUpdate={fetchEvents} 
+        />
       )}
 
       {isCreateModalOpen && (
