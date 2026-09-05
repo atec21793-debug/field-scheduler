@@ -219,7 +219,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
-      // 元の予定を完了ステータスにし、タイトルだけ変更（メモは汚さない）
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -288,7 +287,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
 
-  // データベースのカラムを追加しなくても、全イベント（allEvents）の中から同じ案件名を持ち、かつ未来（または同日以降）に作られた「新日程の予定」を自動で探して表示します
+  // タイトルに「日延べ」や「🔁」などがついていても、純粋な案件名（ベース名）を抽出してマッチングする
   const findLinkedNewSchedule = () => {
     if (!event.allEvents) return null;
     const baseCleanTitle = titleStr
@@ -298,12 +297,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/^日延べ\s*/, '')
       .trim();
 
-    // 同じタイトルを含み、かつ自分自身ではない「🔁」つき等の新しい予定を探す
+    if (!baseCleanTitle) return null;
+
     const matchEvent = event.allEvents.find((e) => {
       if (e.id === event.id) return false;
       const eCleanTitle = (e.title || '')
         .replace(/^★\s*/, '')
         .replace(/^🔁\s*/, '')
+        .replace(/^日延未定\s*/, '')
+        .replace(/^日延べ\s*/, '')
         .trim();
       return eCleanTitle === baseCleanTitle;
     });
