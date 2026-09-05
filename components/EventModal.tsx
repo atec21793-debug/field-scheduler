@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ShoppingCart, FileText, Upload } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart, FileText, Upload } from 'lucide-react';
 
 interface EventModalProps {
-  event: EventItem & { ordered?: boolean; image_url?: string };
+  event: EventItem & { ordered?: boolean; image_url?: string; allEvents?: EventItem[] };
   onClose: () => void;
   onUpdate: () => void;
 }
@@ -40,11 +40,10 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [isSaving, setIsSaving] = useState(false);
 
   const [showPostponeForm, setShowPostponeForm] = useState(false);
-  const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('undecided');
+  const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('date');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
-  // 画像プレビュー拡大表示用モーダルの状態
   const [showImagePreview, setShowImagePreview] = useState(false);
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +90,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   };
 
-  // 画像ファイル選択時の処理（Base64変換して即座に保存）
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -103,7 +101,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       setImageUrl(base64Image);
       
-      // Supabaseへ即座に保存
       const { error } = await supabase
         .from('events')
         .update({ image_url: base64Image })
@@ -117,12 +114,10 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     reader.readAsDataURL(file);
   };
 
-  // 依頼書ボタンクリック時の動作
   const handleIraisyoClick = () => {
     if (imageUrl) {
       setShowImagePreview(true);
     } else {
-      // 画像がない場合はファイル選択ダイアログを開く
       document.getElementById('iraisyo-file-input')?.click();
     }
   };
@@ -164,22 +159,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
-      .replace(/\s*\(\d{4}[-/]\d{1,2}[-/]\d{1,2}[^)]*\)/, '')
       .trim();
-
-    const formatOriginalDateString = (dateStr?: string | null, startStr?: string | null) => {
-      if (!dateStr) return '';
-      const parts = dateStr.split(/[-/]/);
-      if (parts.length >= 3) {
-        const m = parseInt(parts[1], 10);
-        const d = parseInt(parts[2], 10);
-        const timePart = startStr ? ` ${startStr}` : '';
-        return `${m}月${d}日${timePart}`;
-      }
-      return dateStr;
-    };
-
-    const originalDateText = formatOriginalDateString(event.date, event.start_time);
 
     if (postponeType === 'undecided') {
       let newTitle = `日延未定 ${cleanTitle}`.trim();
@@ -214,11 +194,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
-      const originalMemoNote = `[もとの日程: ${originalDateText}]`;
-      const combinedMemo = event.memo 
-        ? `${event.memo}\n${originalMemoNote}` 
-        : originalMemoNote;
-
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -228,7 +203,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           end_time: newEndTimeStr,
           address: event.address,
           color: event.color,
-          memo: combinedMemo,
+          memo: event.memo,
           report: event.report,
           status: 'active',
           ordered: isOrdered,
@@ -245,7 +220,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         .from('events')
         .update({ 
           title: originalTitleWithPostpone,
-          status: 'completed' 
+          status: 'completed'
         })
         .eq('id', event.id);
 
@@ -308,32 +283,64 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
+  const isNewScheduleCard = titleStr.includes('🔁') || (!titleStr.includes('日延べ') && !titleStr.includes('日延未定'));
 
-  const extractOriginalDateFromMemo = (memoStr: string) => {
-    const match = memoStr.match(/\[もとの日程:\s*([^\]]+)\]/);
-    if (match && match[1]) {
-      return match[1];
-    }
-    return null;
-  };
-  const originalDateFromMemo = extractOriginalDateFromMemo(event.memo || '');
-
-  const formatPostponedInfo = (titleStr: string) => {
-    const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
-    if (match) {
-      const [, , month, day, startTime, endTime] = match;
-      return `${parseInt(month, 10)}月${parseInt(day, 10)}日 ${startTime}～${endTime}`;
-    }
-    const dateMatch = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\)/);
-    if (dateMatch) {
-      const [, , month, day] = dateMatch;
-      return `${parseInt(month, 10)}月${parseInt(day, 10)}日`;
-    }
-    return null;
+  const getCleanBaseTitle = (t: string) => {
+    return t
+      .replace(/^★\s*/, '')
+      .replace(/^🔁\s*/, '')
+      .replace(/^日延未定\s*/, '')
+      .replace(/^日延べ\s*/, '')
+      .trim();
   };
 
-  const formattedPostpone = formatPostponedInfo(event.title || '');
-  const displayTitle = (event.title || '')
+  const baseCleanTitle = getCleanBaseTitle(titleStr);
+
+  // 汎用的な日付フォーマット変換 (YYYY-MM-DD -> M月D日)
+  const formatDateText = (dateStr?: string | null) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split(/[-/]/);
+    if (parts.length >= 3) {
+      return `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日`;
+    }
+    return dateStr;
+  };
+
+  // 全イベントから「同じベースタイトル」を持つ他の予定をすべて探す
+  const findLinkedEvents = () => {
+    if (!event.allEvents || !baseCleanTitle) return { newSchedules: [], oldSchedules: [] };
+
+    const newSchedules: string[] = [];
+    const oldSchedules: string[] = [];
+
+    event.allEvents.forEach((e) => {
+      if (e.id === event.id) return;
+      const eTitle = e.title || '';
+      const eCleanTitle = getCleanBaseTitle(eTitle);
+
+      if (eCleanTitle === baseCleanTitle) {
+        const dateText = formatDateText(e.date);
+        const timeText = e.start_time ? ` ${e.start_time}〜` : '';
+        const formattedStr = `${dateText}${timeText}`;
+
+        // 「日延べ」がついているものや、元の予定っぽいものは「元の日程候補」
+        if (eTitle.includes('日延べ') || (new Date(e.date || '') < new Date(event.date || ''))) {
+          if (!oldSchedules.includes(formattedStr)) oldSchedules.push(formattedStr);
+        } else {
+          // それ以外（🔁がついている、または新しい日付）は「新日程候補」
+          if (!newSchedules.includes(formattedStr)) newSchedules.push(formattedStr);
+        }
+      }
+    });
+
+    return { newSchedules, oldSchedules };
+  };
+
+  const { newSchedules, oldSchedules } = findLinkedEvents();
+  const linkedNewText = newSchedules.join(', ');
+  const linkedOldText = oldSchedules.join(', ');
+
+  const displayTitle = titleStr
     .replace(/^★\s*/, '')
     .replace(/^🔁\s*/, '');
 
@@ -343,7 +350,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" 
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ヘッダー部分 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center space-x-2 truncate flex-1 mr-2">
             <label className="flex items-center cursor-pointer select-none flex-shrink-0" title="重要マーク(★)を切り替え">
@@ -362,7 +368,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           </div>
 
           <div className="flex items-center space-x-1.5 flex-shrink-0">
-            {/* 非表示のファイルアップロード用インプット */}
             <input 
               type="file" 
               id="iraisyo-file-input" 
@@ -371,7 +376,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               onChange={handleImageUpload} 
             />
 
-            {/* 依頼書ボタン（画像有無でスタイルやバッジを変更） */}
             <button
               onClick={handleIraisyoClick}
               className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
@@ -433,7 +437,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </label>
               </div>
 
-              {/* 編集画面からの画像変更・追加 */}
               <div>
                 <label className="block text-[11px] font-semibold text-gray-600 mb-1">依頼書画像</label>
                 <div className="flex items-center space-x-2">
@@ -544,25 +547,19 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {isOrdered && (
-                <div className="flex items-center space-x-1.5 pt-0.5">
-                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-semibold">
-                    <span>商品到着済み</span>
-                  </span>
+              {/* 元の日程の表記（新しい日程側、または通常カードから元を見つける場合） */}
+              {linkedOldText && (
+                <div className="flex items-center space-x-1.5 text-blue-700 font-semibold text-xs pt-1">
+                  <ArrowLeft size={14} className="text-blue-500 flex-shrink-0" />
+                  <span>元の日程: {linkedOldText}</span>
                 </div>
               )}
 
-              {originalDateFromMemo && (
-                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
-                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
-                  <span>もとの日程: {originalDateFromMemo}</span>
-                </div>
-              )}
-
-              {formattedPostpone && (
-                <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
-                  <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
-                  <span>新日程: {formattedPostpone}</span>
+              {/* 新日程の表記（日延べ元のカード等） */}
+              {linkedNewText && (
+                <div className="flex items-center space-x-1.5 text-amber-700 font-semibold text-xs pt-1">
+                  <ArrowRight size={14} className="text-amber-500 flex-shrink-0" />
+                  <span>新日程: {linkedNewText}</span>
                 </div>
               )}
             </div>
@@ -617,7 +614,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'undecided'}
                     onChange={() => setPostponeType('undecided')}
                   />
-                  <span>未定（日延未定と表示・透過しない）</span>
+                  <span>未定（日延未定と表示）</span>
                 </label>
                 <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
@@ -626,7 +623,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     checked={postponeType === 'date'}
                     onChange={() => setPostponeType('date')}
                   />
-                  <span>日程を決めて新規作成（元は半透明＋日延べ）</span>
+                  <span>日程を決めて新規作成（元は完了に）</span>
                 </label>
               </div>
 
@@ -719,7 +716,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         </div>
       </div>
 
-      {/* 依頼書画像プレビュー用サブモーダル */}
       {showImagePreview && imageUrl && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4" onClick={() => setShowImagePreview(false)}>
           <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden p-2" onClick={(e) => e.stopPropagation()}>
