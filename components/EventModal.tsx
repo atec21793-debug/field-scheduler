@@ -40,7 +40,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [isSaving, setIsSaving] = useState(false);
 
   const [showPostponeForm, setShowPostponeForm] = useState(false);
-  const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('undecided');
+  const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('date');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
