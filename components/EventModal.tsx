@@ -109,7 +109,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // 現在の images 配列をベースにする
     const updatedImages = [...images];
 
     for (let i = 0; i < files.length; i++) {
@@ -420,14 +419,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               onClick={handleIraisyoClick}
               className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
                 images.length > 0 
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' 
-                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-gray-200 border-gray-300 text-gray-800 hover:bg-gray-300 shadow-sm' 
+                  : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
               }`}
               title={images.length > 0 ? "依頼書画像を表示" : "依頼書画像を添付"}
             >
-              <FileText size={15} className={images.length > 0 ? "text-emerald-600" : "text-gray-500"} />
+              <FileText size={15} className={images.length > 0 ? "text-gray-700" : "text-gray-400"} />
               <span>依頼書</span>
-              {images.length > 0 && <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[10px]">{images.length}</span>}
             </button>
 
             {!isEditing && (
@@ -485,7 +483,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     <span>画像を追加する</span>
                     <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                   </label>
-                  {images.length > 0 && <span className="text-xs text-emerald-600 font-medium">✓ {images.length}枚添付済み</span>}
+                  {images.length > 0 && <span className="text-xs text-gray-700 font-medium">✓ 画像添付済み</span>}
                 </div>
                 {images.length > 0 && (
                   <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
@@ -776,7 +774,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden p-3 flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center pb-2 px-2 border-b">
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-gray-700">依頼書プレビュー ({activeImageIndex + 1} / {images.length})</span>
+                <span className="text-xs font-bold text-gray-700">依頼書プレビュー</span>
                 <label className="cursor-pointer px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs text-gray-700">
                   + 画像を追加
                   <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
