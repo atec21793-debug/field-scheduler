@@ -191,7 +191,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
-      // 新日程側には「🔁 案件名」または元のタイトルを元に作成
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
@@ -214,7 +213,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       if (insertError) return;
 
-      // 元の予定には「日延べ 案件名」をつけて完了状態にする
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
@@ -285,63 +283,62 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
-  const isNewScheduleCard = titleStr.includes('🔁');
+  const isNewScheduleCard = titleStr.includes('🔁') || (!titleStr.includes('日延べ') && !titleStr.includes('日延未定'));
 
-  const baseCleanTitle = titleStr
-    .replace(/^★\s*/, '')
-    .replace(/^🔁\s*/, '')
-    .replace(/^日延未定\s*/, '')
-    .replace(/^日延べ\s*/, '')
-    .trim();
-
-  // 1. 元の予定から見た「新日程」を探す（タイトルが「日延べ」等になっているもの、または「🔁」がついた同じ名前の別の日付の予定）
-  const findLinkedNewSchedule = () => {
-    if (!event.allEvents || !baseCleanTitle) return null;
-    const matchEvent = event.allEvents.find((e) => {
-      if (e.id === event.id) return false;
-      const eCleanTitle = (e.title || '')
-        .replace(/^★\s*/, '')
-        .replace(/^🔁\s*/, '')
-        .replace(/^日延未定\s*/, '')
-        .replace(/^日延べ\s*/, '')
-        .trim();
-      return eCleanTitle === baseCleanTitle && e.date !== event.date;
-    });
-
-    if (matchEvent && matchEvent.date) {
-      const parts = matchEvent.date.split(/[-/]/);
-      const dateText = parts.length >= 3 ? `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日` : matchEvent.date;
-      const timeText = matchEvent.start_time ? ` ${matchEvent.start_time}〜` : '';
-      return `${dateText}${timeText}`;
-    }
-    return null;
+  const getCleanBaseTitle = (t: string) => {
+    return t
+      .replace(/^★\s*/, '')
+      .replace(/^🔁\s*/, '')
+      .replace(/^日延未定\s*/, '')
+      .replace(/^日延べ\s*/, '')
+      .trim();
   };
 
-  // 2. 新日程（🔁）から見た「元の日程」を探す（同じベースタイトルを持ち、過去または「日延べ」とついている予定）
-  const findLinkedOldSchedule = () => {
-    if (!event.allEvents || !baseCleanTitle) return null;
-    const matchEvent = event.allEvents.find((e) => {
-      if (e.id === event.id) return false;
+  const baseCleanTitle = getCleanBaseTitle(titleStr);
+
+  // 汎用的な日付フォーマット変換 (YYYY-MM-DD -> M月D日)
+  const formatDateText = (dateStr?: string | null) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split(/[-/]/);
+    if (parts.length >= 3) {
+      return `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日`;
+    }
+    return dateStr;
+  };
+
+  // 全イベントから「同じベースタイトル」を持つ他の予定をすべて探す
+  const findLinkedEvents = () => {
+    if (!event.allEvents || !baseCleanTitle) return { newSchedules: [], oldSchedules: [] };
+
+    const newSchedules: string[] = [];
+    const oldSchedules: string[] = [];
+
+    event.allEvents.forEach((e) => {
+      if (e.id === event.id) return;
       const eTitle = e.title || '';
-      const eCleanTitle = eTitle
-        .replace(/^★\s*/, '')
-        .replace(/^🔁\s*/, '')
-        .replace(/^日延未定\s*/, '')
-        .replace(/^日延べ\s*/, '')
-        .trim();
-      return eCleanTitle === baseCleanTitle && (eTitle.includes('日延べ') || e.date !== event.date);
+      const eCleanTitle = getCleanBaseTitle(eTitle);
+
+      if (eCleanTitle === baseCleanTitle) {
+        const dateText = formatDateText(e.date);
+        const timeText = e.start_time ? ` ${e.start_time}〜` : '';
+        const formattedStr = `${dateText}${timeText}`;
+
+        // 「日延べ」がついているものや、元の予定っぽいものは「元の日程候補」
+        if (eTitle.includes('日延べ') || (new Date(e.date || '') < new Date(event.date || ''))) {
+          if (!oldSchedules.includes(formattedStr)) oldSchedules.push(formattedStr);
+        } else {
+          // それ以外（🔁がついている、または新しい日付）は「新日程候補」
+          if (!newSchedules.includes(formattedStr)) newSchedules.push(formattedStr);
+        }
+      }
     });
 
-    if (matchEvent && matchEvent.date) {
-      const parts = matchEvent.date.split(/[-/]/);
-      const dateText = parts.length >= 3 ? `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日` : matchEvent.date;
-      return `${dateText}`;
-    }
-    return null;
+    return { newSchedules, oldSchedules };
   };
 
-  const linkedNewScheduleText = findLinkedNewSchedule();
-  const linkedOldScheduleText = findLinkedOldSchedule();
+  const { newSchedules, oldSchedules } = findLinkedEvents();
+  const linkedNewText = newSchedules.join(', ');
+  const linkedOldText = oldSchedules.join(', ');
 
   const displayTitle = titleStr
     .replace(/^★\s*/, '')
@@ -550,19 +547,19 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {/* 新日程のカードを開いたときは「元の日程」を表示 */}
-              {isNewScheduleCard && linkedOldScheduleText && (
+              {/* 元の日程の表記（新しい日程側、または通常カードから元を見つける場合） */}
+              {linkedOldText && (
                 <div className="flex items-center space-x-1.5 text-blue-700 font-semibold text-xs pt-1">
                   <ArrowLeft size={14} className="text-blue-500 flex-shrink-0" />
-                  <span>元の日程: {linkedOldScheduleText}</span>
+                  <span>元の日程: {linkedOldText}</span>
                 </div>
               )}
 
-              {/* 元の予定のカードを開いたときは「新日程」を表示 */}
-              {!isNewScheduleCard && linkedNewScheduleText && (
+              {/* 新日程の表記（日延べ元のカード等） */}
+              {linkedNewText && (
                 <div className="flex items-center space-x-1.5 text-amber-700 font-semibold text-xs pt-1">
                   <ArrowRight size={14} className="text-amber-500 flex-shrink-0" />
-                  <span>新日程: {linkedNewScheduleText}</span>
+                  <span>新日程: {linkedNewText}</span>
                 </div>
               )}
             </div>
