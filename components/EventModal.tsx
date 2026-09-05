@@ -228,8 +228,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         : originalMemoNote;
 
       const combinedMemoForOriginal = event.memo 
-        ? `${event.memo}\n${originalMemoNote}\n${newScheduleNote}` 
-        : `${originalMemoNote}\n${newScheduleNote}`;
+        ? `${event.memo}\n${newScheduleNote}` 
+        : newScheduleNote;
 
       // 新日程の予定を新規作成
       const { error: insertError } = await supabase.from('events').insert([
@@ -254,7 +254,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
-      // 元の予定を完了ステータスにし、メモに新日程を残す
+      // 元の予定を完了ステータスにし、メモに新日程のみ残す
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -323,15 +323,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
-
-  const extractOriginalDateFromMemo = (memoStr: string) => {
-    const match = memoStr.match(/\[もとの日程:\s*([^\]]+)\]/);
-    if (match && match[1]) {
-      return match[1];
-    }
-    return null;
-  };
-  const originalDateFromMemo = extractOriginalDateFromMemo(event.memo || '');
 
   // メモから新日程を抽出する関数
   const extractNewDateFromMemo = (memoStr: string) => {
@@ -581,13 +572,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
                   <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
                   <span>新日程: {formattedPostpone}</span>
-                </div>
-              )}
-
-              {originalDateFromMemo && (
-                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
-                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
-                  <span>もとの日程: {originalDateFromMemo}</span>
                 </div>
               )}
             </div>
