@@ -214,11 +214,24 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
+      // 新日程のテキストを作成
+      const newDateParts = newPostponeDate.split(/[-/]/);
+      const newDateText = newDateParts.length >= 3 
+        ? `${parseInt(newDateParts[1], 10)}月${parseInt(newDateParts[2], 10)}日 ${newStartTimeStr}〜${newEndTimeStr}` 
+        : `${newPostponeDate} ${newStartTimeStr}〜${newEndTimeStr}`;
+
       const originalMemoNote = `[もとの日程: ${originalDateText}]`;
-      const combinedMemo = event.memo 
+      const newScheduleNote = `[新日程: ${newDateText}]`;
+
+      const combinedMemoForNew = event.memo 
         ? `${event.memo}\n${originalMemoNote}` 
         : originalMemoNote;
 
+      const combinedMemoForOriginal = event.memo 
+        ? `${event.memo}\n${originalMemoNote}\n${newScheduleNote}` 
+        : `${originalMemoNote}\n${newScheduleNote}`;
+
+      // 新日程の予定を新規作成
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -228,7 +241,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           end_time: newEndTimeStr,
           address: event.address,
           color: event.color,
-          memo: combinedMemo,
+          memo: combinedMemoForNew,
           report: event.report,
           status: 'active',
           ordered: isOrdered,
@@ -241,11 +254,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
+      // 元の予定を完了ステータスにし、メモに新日程を残す
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
           title: originalTitleWithPostpone,
-          status: 'completed' 
+          status: 'completed',
+          memo: combinedMemoForOriginal
         })
         .eq('id', event.id);
 
@@ -318,6 +333,16 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
   const originalDateFromMemo = extractOriginalDateFromMemo(event.memo || '');
 
+  // メモから新日程を抽出する関数
+  const extractNewDateFromMemo = (memoStr: string) => {
+    const match = memoStr.match(/\[新日程:\s*([^\]]+)\]/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    return null;
+  };
+  const newDateFromMemo = extractNewDateFromMemo(event.memo || '');
+
   const formatPostponedInfo = (titleStr: string) => {
     const match = titleStr.match(/\((\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{2}:\d{2})\s*[〜~-]\s*(\d{2}:\d{2})\)/);
     if (match) {
@@ -332,7 +357,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     return null;
   };
 
-  const formattedPostpone = formatPostponedInfo(event.title || '');
+  const formattedPostpone = formatPostponedInfo(event.title || '') || newDateFromMemo;
   const displayTitle = (event.title || '')
     .replace(/^★\s*/, '')
     .replace(/^🔁\s*/, '');
@@ -552,17 +577,17 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </div>
               )}
 
-              {originalDateFromMemo && (
-                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
-                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
-                  <span>もとの日程: {originalDateFromMemo}</span>
-                </div>
-              )}
-
               {formattedPostpone && (
                 <div className="flex items-center space-x-2 text-amber-700 font-semibold pt-1">
                   <ArrowRight size={16} className="text-amber-500 flex-shrink-0" />
                   <span>新日程: {formattedPostpone}</span>
+                </div>
+              )}
+
+              {originalDateFromMemo && (
+                <div className="flex items-center space-x-1.5 pt-0.5 text-xs text-gray-500">
+                  <Clock size={14} className="text-gray-400 flex-shrink-0" />
+                  <span>もとの日程: {originalDateFromMemo}</span>
                 </div>
               )}
             </div>
