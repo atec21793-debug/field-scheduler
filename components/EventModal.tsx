@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart, FileText, Upload } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart } from 'lucide-react';
 
 interface EventModalProps {
   event: EventItem & { ordered?: boolean; image_url?: string; allEvents?: EventItem[] };
@@ -33,21 +33,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
   const [isOrdered, setIsOrdered] = useState(event.ordered || false);
-  
-  const parseImages = (urlStr?: string | null): string[] => {
-    if (!urlStr) return [];
-    if (urlStr.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(urlStr);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        // pass
-      }
-    }
-    return urlStr.split(',').map((s) => s.trim()).filter(Boolean);
-  };
-
-  const [images, setImages] = useState<string[]>(parseImages(event.image_url));
 
   const [memo, setMemo] = useState(event.memo || '');
   const [report, setReport] = useState(event.report || '');
@@ -57,9 +42,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('date');
   const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
-
-  const [showImagePreview, setShowImagePreview] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
@@ -103,66 +85,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     const h = Math.floor(clamped / 60);
     const m = clamped % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const updatedImages = [...images];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      await new Promise<void>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-          const base64Image = uploadEvent.target?.result as string;
-          if (base64Image) {
-            updatedImages.push(base64Image);
-          }
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    const imagesJson = JSON.stringify(updatedImages);
-    setImages(updatedImages);
-    
-    const { error } = await supabase
-      .from('events')
-      .update({ image_url: imagesJson })
-      .eq('id', event.id);
-
-    if (!error) {
-      event.image_url = imagesJson;
-      onUpdate();
-    }
-  };
-
-  const handleRemoveImage = async (indexToRemove: number) => {
-    const newImages = images.filter((_, idx) => idx !== indexToRemove);
-    const imagesJson = newImages.length > 0 ? JSON.stringify(newImages) : '';
-    setImages(newImages);
-
-    const { error } = await supabase
-      .from('events')
-      .update({ image_url: imagesJson })
-      .eq('id', event.id);
-
-    if (!error) {
-      event.image_url = imagesJson;
-      onUpdate();
-    }
-  };
-
-  const handleIraisyoClick = () => {
-    if (images.length > 0) {
-      setActiveImageIndex(0);
-      setShowImagePreview(true);
-    } else {
-      document.getElementById('iraisyo-file-input')?.click();
-    }
   };
 
   const handleSaveBasicInfo = async (e: React.FormEvent) => {
@@ -406,28 +328,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           </div>
 
           <div className="flex items-center space-x-1.5 flex-shrink-0">
-            <input 
-              type="file" 
-              id="iraisyo-file-input" 
-              accept="image/*" 
-              multiple 
-              className="hidden" 
-              onChange={handleImageUpload} 
-            />
-
-            <button
-              onClick={handleIraisyoClick}
-              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                images.length > 0 
-                  ? 'bg-gray-200 border-gray-300 text-gray-800 hover:bg-gray-300 shadow-sm' 
-                  : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'
-              }`}
-              title={images.length > 0 ? "依頼書画像を表示" : "依頼書画像を添付"}
-            >
-              <FileText size={15} className={images.length > 0 ? "text-gray-700" : "text-gray-400"} />
-              <span>依頼書</span>
-            </button>
-
             {!isEditing && (
               <button 
                 onClick={() => setIsEditing(true)}
@@ -473,35 +373,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   <ShoppingCart size={14} className="text-indigo-600" />
                   <span>商品発注済み・支給</span>
                 </label>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-600 mb-1">依頼書画像（複数選択可）</label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="cursor-pointer px-3 py-1.5 bg-white border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50 flex items-center space-x-1">
-                    <Upload size={14} />
-                    <span>画像を追加する</span>
-                    <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-                  </label>
-                  {images.length > 0 && <span className="text-xs text-gray-700 font-medium">✓ 画像添付済み</span>}
-                </div>
-                {images.length > 0 && (
-                  <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
-                    {images.map((img, idx) => (
-                      <div key={idx} className="relative w-14 h-14 border rounded bg-white flex-shrink-0 group">
-                        <img src={img} alt={`依頼書 ${idx + 1}`} className="w-full h-full object-cover rounded" />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(idx)}
-                          className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center shadow hover:bg-red-700"
-                          title="この画像を削除"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -768,55 +639,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           </div>
         </div>
       </div>
-
-      {showImagePreview && images.length > 0 && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4" onClick={() => setShowImagePreview(false)}>
-          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden p-3 flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center pb-2 px-2 border-b">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-gray-700">依頼書プレビュー</span>
-                <label className="cursor-pointer px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs text-gray-700">
-                  + 画像を追加
-                  <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveImage(activeImageIndex)}
-                  className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-xs font-semibold"
-                >
-                  この画像を削除
-                </button>
-              </div>
-              <button 
-                onClick={() => setShowImagePreview(false)}
-                className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-3 flex justify-center items-center overflow-auto max-h-[70vh] flex-1">
-              <img src={images[activeImageIndex]} alt="依頼書" className="max-w-full max-h-[65vh] object-contain rounded" />
-            </div>
-
-            {images.length > 1 && (
-              <div className="flex justify-center items-center gap-2 pt-2 border-t overflow-x-auto">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`w-12 h-12 rounded border-2 overflow-hidden flex-shrink-0 transition ${
-                      activeImageIndex === idx ? 'border-blue-600 scale-105' : 'border-gray-200 opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt={`サムネイル ${idx + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
