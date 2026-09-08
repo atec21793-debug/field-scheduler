@@ -93,7 +93,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     return h * 60 + m;
   };
 
-  // ドラッグ＆ドロップで予定を移動する処理（30分刻み対応）
+  // カレンダー上で予定を移動（または配置）した際の処理
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -130,7 +130,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // 「日延未定」が含まれていた場合のみ、それを削除して先頭に「🔁」を付与する
+    // 「日延未定」が含まれていた場合、それを削除して先頭に「🔁」を付与する
     let updatedTitle = targetEvent.title || '';
     if (updatedTitle.includes('日延未定')) {
       updatedTitle = updatedTitle
@@ -143,17 +143,33 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       }
     }
 
-    const { error } = await supabase.from('events').update({
-      date: targetDateStr,
-      start_time: newStartTime,
-      end_time: newEndTime,
-      time: newTimeString,
-      title: updatedTitle,
-    }).eq('id', eventId);
+    // 1. 元のカード（日延未定）を消さずに、ステータスを 'completed' に更新する（半透明表示になる）
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ status: 'completed' })
+      .eq('id', eventId);
 
-    if (!error && onUpdate) {
+    if (updateError) {
+      console.error('Failed to update event status:', updateError);
+      return;
+    }
+
+    // 2. カレンダー上のドロップ先には、通常の新しい予定を挿入する（こちらは半透明にしないため active）
+    const { error: insertError } = await supabase.from('events').insert([
+      {
+        title: updatedTitle,
+        date: targetDateStr,
+        start_time: newStartTime,
+        end_time: newEndTime,
+        time: newTimeString,
+        color: targetEvent.color,
+        status: 'active',
+      },
+    ]);
+
+    if (!insertError && onUpdate) {
       onUpdate();
-    } else if (!error) {
+    } else if (!insertError) {
       window.location.reload();
     }
   };
@@ -383,7 +399,10 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const title = event.title || '';
                   const isUndecided = title.includes('日延未定');
                   const isPostponed = title.includes('日延べ') && !isUndecided;
-                  const shouldDim = isPostponed || (isCompleted && !isUndecided);
+                  
+                  // ▼「日延未定」のカード自体を完了表示（半透明）にする条件
+                  // ※カレンダーに移された元カードが「日延未定」のままステータス `completed` になるため、半透明になります。
+                  const shouldDim = isPostponed || (isCompleted && !isUndecided) || (isUndecided && isCompleted);
 
                   return (
                     <div
@@ -454,4 +473,3 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     </div>
   );
 }
-
