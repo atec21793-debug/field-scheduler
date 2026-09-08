@@ -93,7 +93,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     return h * 60 + m;
   };
 
-  // カレンダー上で予定を移動（またはドロップ）した際に、元の予定を消さずに完了扱いにする処理
+  // カレンダー上で予定を移動（またはサイドバーから配置）した際の処理
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -143,19 +143,33 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       }
     }
 
-    // 元のカードを消さずに、位置を移動しつつ status を 'completed' に更新する
-    const { error } = await supabase.from('events').update({
-      date: targetDateStr,
-      start_time: newStartTime,
-      end_time: newEndTime,
-      time: newTimeString,
-      title: updatedTitle,
-      status: 'completed',
-    }).eq('id', eventId);
+    // 1. 元のカード（日延未定）を消さずに、ステータスを 'completed' に更新する
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({ status: 'completed' })
+      .eq('id', eventId);
 
-    if (!error && onUpdate) {
+    if (updateError) {
+      console.error('Failed to update event status:', updateError);
+      return;
+    }
+
+    // 2. カレンダー上に新しく通常の予定として挿入する（こちらは completed にしないため active）
+    const { error: insertError } = await supabase.from('events').insert([
+      {
+        title: updatedTitle,
+        date: targetDateStr,
+        start_time: newStartTime,
+        end_time: newEndTime,
+        time: newTimeString,
+        color: targetEvent.color,
+        status: 'active',
+      },
+    ]);
+
+    if (!insertError && onUpdate) {
       onUpdate();
-    } else if (!error) {
+    } else if (!insertError) {
       window.location.reload();
     }
   };
