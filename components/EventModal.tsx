@@ -24,12 +24,16 @@ const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw
 
 const sanitizeDateString = (dateStr?: string | null) => {
   if (!dateStr) return '';
-  const cleaned = dateStr.replace(/[/.年月]/g, '-').replace(/日/g, '').trim();
+  const cleaned = dateStr.replace(/[/.年月]/g, '-').replace(/deg|日/g, '').trim();
   const parts = cleaned.split('-').filter(Boolean);
   if (parts.length >= 3) {
     const year = parts[0];
     const month = parts[1].padStart(2, '0');
-    const day = parts[2].substring(0, 2).padStart(2, '0');
+    let day = parts[2].trim();
+    if (day.length > 2) {
+      day = day.substring(0, 2);
+    }
+    day = day.padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
   return dateStr;
@@ -112,7 +116,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .from('events')
       .update({
         title: finalTitle,
-        date: date || null,
+        date: sanitizeDateString(date) || null,
         start_time: startTime || null,
         end_time: endTime || null,
         time: timeString,
@@ -172,10 +176,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
+      const finalPostponeDate = sanitizeDateString(newPostponeDate);
+
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
-          date: sanitizeDateString(newPostponeDate),
+          date: finalPostponeDate,
           time: newTimeString,
           start_time: newStartTimeStr,
           end_time: newEndTimeStr,
@@ -395,11 +401,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付</label>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付 (YYYY-MM-DD)</label>
                   <input
-                    type="date"
+                    type="text"
                     value={date}
-                    onChange={(e) => setDate(sanitizeDateString(e.target.value))}
+                    onChange={(e) => setDate(e.target.value)}
+                    placeholder="2026-09-11"
                     className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
                   />
                 </div>
@@ -572,11 +579,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               {postponeType === 'date' && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付</label>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付 (YYYY-MM-DD)</label>
                     <input
-                      type="date"
+                      type="text"
                       value={newPostponeDate}
-                      onChange={(e) => setNewPostponeDate(sanitizeDateString(e.target.value))}
+                      onChange={(e) => setNewPostponeDate(e.target.value)}
+                      placeholder="2026-09-11"
                       className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
                       required
                     />
