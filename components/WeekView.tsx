@@ -93,7 +93,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     return h * 60 + m;
   };
 
-  // ドラッグ＆ドロップで予定を移動（またはサイドバーから未定カードを配置）する処理
+  // カレンダー上で予定を移動（またはドロップ）した際に、元の予定を消さずに完了扱いにする処理
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -130,7 +130,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // 「日延未定」が含まれていた場合のみ、それを削除して先頭に「🔁」を付与する
+    // 「日延未定」が含まれていた場合、それを削除して先頭に「🔁」を付与する
     let updatedTitle = targetEvent.title || '';
     if (updatedTitle.includes('日延未定')) {
       updatedTitle = updatedTitle
@@ -143,35 +143,19 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       }
     }
 
-    // 元のカードがサイドバー等から来たもの（あるいは通常の移動）で、別の日時に割り当てる際：
-    // ここでは「元のカードを消さないで完了表示にする」ため、
-    // 1. 元のイベントのステータスを 'completed' に更新する
-    const { error: updateError } = await supabase
-      .from('events')
-      .update({ status: 'completed' })
-      .eq('id', eventId);
+    // 元のカードを消さずに、位置を移動しつつ status を 'completed' に更新する
+    const { error } = await supabase.from('events').update({
+      date: targetDateStr,
+      start_time: newStartTime,
+      end_time: newEndTime,
+      time: newTimeString,
+      title: updatedTitle,
+      status: 'completed',
+    }).eq('id', eventId);
 
-    if (updateError) {
-      console.error('Failed to update event status:', updateError);
-      return;
-    }
-
-    // 2. カレンダー上に新しい予定としてインサートする
-    const { error: insertError } = await supabase.from('events').insert([
-      {
-        title: updatedTitle,
-        date: targetDateStr,
-        start_time: newStartTime,
-        end_time: newEndTime,
-        time: newTimeString,
-        color: targetEvent.color,
-        status: 'active',
-      },
-    ]);
-
-    if (!insertError && onUpdate) {
+    if (!error && onUpdate) {
       onUpdate();
-    } else if (!insertError) {
+    } else if (!error) {
       window.location.reload();
     }
   };
