@@ -22,10 +22,27 @@ const COLOR_OPTIONS = [
 
 const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
 
+const sanitizeDateString = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  const cleaned = dateStr.replace(/[/.年月]/g, '-').replace(/deg|日/g, '').trim();
+  const parts = cleaned.split('-').filter(Boolean);
+  if (parts.length >= 3) {
+    const year = parts[0];
+    const month = parts[1].padStart(2, '0');
+    let day = parts[2].trim();
+    if (day.length > 2) {
+      day = day.substring(0, 2);
+    }
+    day = day.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return dateStr;
+};
+
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(event.title || '');
-  const [date, setDate] = useState(event.date || '');
+  const [date, setDate] = useState(sanitizeDateString(event.date) || '');
   const [startTime, setStartTime] = useState(event.start_time || '');
   const [endTime, setEndTime] = useState(event.end_time || '');
   const [address, setAddress] = useState(event.address || '');
@@ -40,7 +57,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const [showPostponeForm, setShowPostponeForm] = useState(false);
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('date');
-  const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
+  const [newPostponeDate, setNewPostponeDate] = useState(sanitizeDateString(event.date) || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,7 +116,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .from('events')
       .update({
         title: finalTitle,
-        date: date || null,
+        date: sanitizeDateString(date) || null,
         start_time: startTime || null,
         end_time: endTime || null,
         time: timeString,
@@ -138,6 +155,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       if (!error) {
         onUpdate();
         onClose();
+      } else {
+        alert('日延未定への更新に失敗しました: ' + error.message);
       }
     } else {
       let durationMinutes = 60;
@@ -159,28 +178,35 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
+      const finalPostponeDate = sanitizeDateString(newPostponeDate);
+
+      // 新規イベント挿入（image_url を削除）
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
-          date: newPostponeDate,
+          date: finalPostponeDate,
           time: newTimeString,
           start_time: newStartTimeStr,
           end_time: newEndTimeStr,
-          address: event.address,
-          color: event.color,
-          memo: event.memo,
-          report: event.report,
+          address: event.address || null,
+          color: event.color || '#1e3a8a',
+          memo: event.memo || null,
+          report: event.report || null,
           status: 'active',
           ordered: isOrdered,
-          image_url: event.image_url,
         },
       ]);
 
-      if (insertError) return;
+      if (insertError) {
+        console.error('Failed to insert postponed event:', insertError);
+        alert('新日程の作成に失敗しました: ' + insertError.message);
+        return;
+      }
 
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
+      // 元のイベントを完了済みに更新
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -192,6 +218,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       if (!updateError) {
         onUpdate();
         onClose();
+      } else {
+        console.error('Failed to update original event:', updateError);
+        alert('元イベントの更新に失敗しました: ' + updateError.message);
       }
     }
   };
@@ -377,11 +406,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付</label>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付 (YYYY-MM-DD)</label>
                   <input
-                    type="date"
+                    type="text"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    placeholder="2026-09-11"
                     className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
                   />
                 </div>
@@ -554,11 +584,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               {postponeType === 'date' && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付</label>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付 (YYYY-MM-DD)</label>
                     <input
-                      type="date"
+                      type="text"
                       value={newPostponeDate}
                       onChange={(e) => setNewPostponeDate(e.target.value)}
+                      placeholder="2026-09-11"
                       className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
                       required
                     />
@@ -586,7 +617,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 font-semibold"
+                  className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 font-semibold cursor-pointer"
                 >
                   決定
                 </button>
