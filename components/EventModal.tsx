@@ -176,8 +176,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         },
       ]);
 
-      if (insertError) return;
+      if (insertError) {
+        console.error('Failed to insert postponed event:', insertError);
+        return;
+      }
 
+      // ▼【修正ポイント】日延べ元のタイトルから「日延未定」も確実に掃除して「日延べ (タイトル)」にする
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
@@ -192,6 +196,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       if (!updateError) {
         onUpdate();
         onClose();
+      } else {
+        console.error('Failed to update original event:', updateError);
       }
     }
   };
