@@ -180,7 +180,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       const finalPostponeDate = sanitizeDateString(newPostponeDate);
 
-      // 新規イベント挿入
+      // 新規イベント挿入（image_url を削除）
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -194,7 +194,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           report: event.report || null,
           status: 'active',
           ordered: isOrdered,
-          image_url: event.image_url || null,
         },
       ]);
 
