@@ -22,10 +22,23 @@ const COLOR_OPTIONS = [
 
 const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
 
+const sanitizeDateString = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  const cleaned = dateStr.replace(/[/.年月]/g, '-').replace(/日/g, '').trim();
+  const parts = cleaned.split('-').filter(Boolean);
+  if (parts.length >= 3) {
+    const year = parts[0];
+    const month = parts[1].padStart(2, '0');
+    const day = parts[2].substring(0, 2).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return dateStr;
+};
+
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(event.title || '');
-  const [date, setDate] = useState(event.date || '');
+  const [date, setDate] = useState(sanitizeDateString(event.date) || '');
   const [startTime, setStartTime] = useState(event.start_time || '');
   const [endTime, setEndTime] = useState(event.end_time || '');
   const [address, setAddress] = useState(event.address || '');
@@ -40,7 +53,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const [showPostponeForm, setShowPostponeForm] = useState(false);
   const [postponeType, setPostponeType] = useState<'undecided' | 'date'>('date');
-  const [newPostponeDate, setNewPostponeDate] = useState(event.date || '');
+  const [newPostponeDate, setNewPostponeDate] = useState(sanitizeDateString(event.date) || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +175,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
-          date: newPostponeDate,
+          date: sanitizeDateString(newPostponeDate),
           time: newTimeString,
           start_time: newStartTimeStr,
           end_time: newEndTimeStr,
@@ -181,7 +194,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         return;
       }
 
-      // ▼【修正ポイント】日延べ元のタイトルから「日延未定」も確実に掃除して「日延べ (タイトル)」にする
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
@@ -387,7 +399,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                   <input
                     type="date"
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(e) => setDate(sanitizeDateString(e.target.value))}
                     className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
                   />
                 </div>
@@ -564,7 +576,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                     <input
                       type="date"
                       value={newPostponeDate}
-                      onChange={(e) => setNewPostponeDate(e.target.value)}
+                      onChange={(e) => setNewPostponeDate(sanitizeDateString(e.target.value))}
                       className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
                       required
                     />
