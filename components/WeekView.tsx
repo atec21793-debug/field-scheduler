@@ -93,7 +93,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     return h * 60 + m;
   };
 
-  // カレンダー上で予定を移動（またはサイドバーから配置）した際の処理
+  // カレンダー上で予定を移動（または配置）した際の処理
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -143,7 +143,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       }
     }
 
-    // 1. 元のカード（日延未定）を消さずに、ステータスを 'completed' に更新する
+    // 1. 元のカード（日延未定）を消さずに、ステータスを 'completed' に更新する（半透明表示になる）
     const { error: updateError } = await supabase
       .from('events')
       .update({ status: 'completed' })
@@ -154,7 +154,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       return;
     }
 
-    // 2. カレンダー上に新しく通常の予定として挿入する（こちらは completed にしないため active）
+    // 2. カレンダー上のドロップ先には、通常の新しい予定を挿入する（こちらは半透明にしないため active）
     const { error: insertError } = await supabase.from('events').insert([
       {
         title: updatedTitle,
@@ -399,7 +399,10 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const title = event.title || '';
                   const isUndecided = title.includes('日延未定');
                   const isPostponed = title.includes('日延べ') && !isUndecided;
-                  const shouldDim = isPostponed || (isCompleted && !isUndecided);
+                  
+                  // ▼「日延未定」のカード自体を完了表示（半透明）にする条件
+                  // ※カレンダーに移された元カードが「日延未定」のままステータス `completed` になるため、半透明になります。
+                  const shouldDim = isPostponed || (isCompleted && !isUndecided) || (isUndecided && isCompleted);
 
                   return (
                     <div
