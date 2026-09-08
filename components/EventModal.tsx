@@ -155,6 +155,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       if (!error) {
         onUpdate();
         onClose();
+      } else {
+        alert('日延未定への更新に失敗しました: ' + error.message);
       }
     } else {
       let durationMinutes = 60;
@@ -178,6 +180,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       const finalPostponeDate = sanitizeDateString(newPostponeDate);
 
+      // 新規イベント挿入
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -185,24 +188,26 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           time: newTimeString,
           start_time: newStartTimeStr,
           end_time: newEndTimeStr,
-          address: event.address,
-          color: event.color,
-          memo: event.memo,
-          report: event.report,
+          address: event.address || null,
+          color: event.color || '#1e3a8a',
+          memo: event.memo || null,
+          report: event.report || null,
           status: 'active',
           ordered: isOrdered,
-          image_url: event.image_url,
+          image_url: event.image_url || null,
         },
       ]);
 
       if (insertError) {
         console.error('Failed to insert postponed event:', insertError);
+        alert('新日程の作成に失敗しました: ' + insertError.message);
         return;
       }
 
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
+      // 元のイベントを完了済みに更新
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -216,6 +221,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         onClose();
       } else {
         console.error('Failed to update original event:', updateError);
+        alert('元イベントの更新に失敗しました: ' + updateError.message);
       }
     }
   };
@@ -612,7 +618,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 font-semibold"
+                  className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 font-semibold cursor-pointer"
                 >
                   決定
                 </button>
