@@ -403,9 +403,19 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const isUndecided = title.includes('日延未定');
                   const isPostponed = title.includes('日延べ') && !isUndecided;
                   
-                  // ▼「日延未定」のカード自体を完了表示（半透明）にする条件
-                  // ※カレンダーに移された元カードが「日延未定」のままステータス `completed` になるため、半透明になります。
                   const shouldDim = isPostponed || (isCompleted && !isUndecided) || (isUndecided && isCompleted);
+
+                  // ▼ サイドバーから持ってきたカードの元日程情報を取得（安全なガード処理付き）
+                  let originalDateStr = '';
+                  if (event.prev_event_id) {
+                    const originalEvent = events.find((ev) => Number(ev.id) === Number(event.prev_event_id));
+                    if (originalEvent && originalEvent.date) {
+                      const [y, m, d] = originalEvent.date.split('-');
+                      const formattedDate = `${Number(m)}月${Number(d)}日`;
+                      const timePart = originalEvent.start_time ? ` ${originalEvent.start_time}` : '';
+                      originalDateStr = `${formattedDate}${timePart}`;
+                    }
+                  }
 
                   return (
                     <div
@@ -424,9 +434,16 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                         padding: '1px',
                         zIndex: 10 + colIndex,
                       }}
-                      className={`overflow-hidden box-border transition-opacity ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
+                      className={`overflow-hidden box-border transition-opacity flex flex-col ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
                     >
-                      <EventCard event={event} onClick={() => onSelectEvent(event)} />
+                      {originalDateStr && (
+                        <div className="bg-amber-100 text-amber-800 text-[9px] px-1 py-0.5 rounded-t truncate font-semibold leading-tight border-b border-amber-200">
+                          元日程: {originalDateStr}
+                        </div>
+                      )}
+                      <div className="flex-1 overflow-hidden">
+                        <EventCard event={event} onClick={() => onSelectEvent(event)} />
+                      </div>
                     </div>
                   );
                 })}
