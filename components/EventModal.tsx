@@ -180,7 +180,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       const finalPostponeDate = sanitizeDateString(newPostponeDate);
 
-      // 新規イベント挿入（prev_event_id に現在のイベントIDを紐付け）
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -207,7 +206,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
-      // 元のイベントを完了済みに更新
       const { error: updateError } = await supabase
         .from('events')
         .update({ 
@@ -294,7 +292,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     const newSchedules: string[] = [];
     const oldSchedules: string[] = [];
 
-    // 1. このイベントの「元となったイベント」を探す（自分が新日程の場合）
     if (event.prev_event_id) {
       const parentEvent = event.allEvents.find((e) => e.id === event.prev_event_id);
       if (parentEvent) {
@@ -304,7 +301,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       }
     }
 
-    // 2. このイベントを「元として新しく作られたイベント」を探す（自分が元日程の場合）
     event.allEvents.forEach((e) => {
       if (e.prev_event_id === event.id) {
         const dateText = formatDateText(e.date);
@@ -497,14 +493,14 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               )}
 
               {linkedOldText && (
-                <div className="flex items-center space-x-1.5 text-blue-700 font-semibold text-xs pt-1">
+                <div className="flex items-center space-x-1.5 text-blue-700 font-semibold text-xs pt-0.5">
                   <ArrowLeft size={14} className="text-blue-500 flex-shrink-0" />
                   <span>元の日程: {linkedOldText}</span>
                 </div>
               )}
 
               {linkedNewText && (
-                <div className="flex items-center space-x-1.5 text-amber-700 font-semibold text-xs pt-1">
+                <div className="flex items-center space-x-1.5 text-amber-700 font-semibold text-xs pt-0.5">
                   <ArrowRight size={14} className="text-amber-500 flex-shrink-0" />
                   <span>新日程: {linkedNewText}</span>
                 </div>
