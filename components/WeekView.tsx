@@ -43,7 +43,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   // モーダル用state
   const [selectedDateForHoliday, setSelectedDateForHoliday] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string>('天野');
-  const members = ['天野', '佐々木', '山岡'];
+  const members = ['天野', '佐々木', '宇治'];
 
   // スワイプ検知用の座標保持用ref
   const touchStartX = useRef<number | null>(null);
@@ -154,7 +154,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       return;
     }
 
-    // 2. カレンダー上のドロップ先には、通常の新しい予定を挿入する（こちらは半透明にしないため active）
+    // 2. カレンダー上のドロップ先には、通常の新しい予定を挿入する（prev_event_id に元の eventId を紐付ける）
     const { error: insertError } = await supabase.from('events').insert([
       {
         title: updatedTitle,
@@ -164,6 +164,9 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         time: newTimeString,
         color: targetEvent.color,
         status: 'active',
+        address: targetEvent.address,
+        memo: targetEvent.memo,
+        prev_event_id: eventId, // ★ ここで元のイベントIDを紐付ける
       },
     ]);
 
@@ -400,8 +403,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const isUndecided = title.includes('日延未定');
                   const isPostponed = title.includes('日延べ') && !isUndecided;
                   
-                  // ▼「日延未定」のカード自体を完了表示（半透明）にする条件
-                  // ※カレンダーに移された元カードが「日延未定」のままステータス `completed` になるため、半透明になります。
                   const shouldDim = isPostponed || (isCompleted && !isUndecided) || (isUndecided && isCompleted);
 
                   return (

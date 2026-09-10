@@ -25,6 +25,7 @@ export type EventItem = {
   memo?: string | null;
   report?: string | null;
   ordered?: boolean;
+  prev_event_id?: number | null; // 追加
 };
 
 export default function Home() {
