@@ -154,7 +154,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
       return;
     }
 
-    // 2. カレンダー上のドロップ先には、通常の新しい予定を挿入する（こちらは半透明にしないため active）
+    // 2. カレンダー上のドロップ先には、通常の新しい予定を挿入する（prev_event_id に元の eventId を紐付ける）
     const { error: insertError } = await supabase.from('events').insert([
       {
         title: updatedTitle,
@@ -164,6 +164,9 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         time: newTimeString,
         color: targetEvent.color,
         status: 'active',
+        address: targetEvent.address,
+        memo: targetEvent.memo,
+        prev_event_id: eventId, // ★ ここで元のイベントIDを紐付ける
       },
     ]);
 
