@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart } from 'lucide-react';
 
 interface EventModalProps {
-  event: EventItem & { ordered?: boolean; image_url?: string; allEvents?: EventItem[] };
+  event: EventItem & { ordered?: boolean; image_url?: string; allEvents?: EventItem[]; prev_event_id?: number | null };
   onClose: () => void;
   onUpdate: () => void;
 }
@@ -180,7 +180,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
       const finalPostponeDate = sanitizeDateString(newPostponeDate);
 
-      // 新規イベント挿入（image_url を削除）
+      // 新規イベント挿入（prev_event_id に現在のイベントIDを紐付け）
       const { error: insertError } = await supabase.from('events').insert([
         {
           title: newCardTitle,
@@ -194,6 +194,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           report: event.report || null,
           status: 'active',
           ordered: isOrdered,
+          prev_event_id: event.id,
         },
       ]);
 
@@ -278,17 +279,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
 
-  const getCleanBaseTitle = (t: string) => {
-    return t
-      .replace(/^★\s*/, '')
-      .replace(/^🔁\s*/, '')
-      .replace(/^日延未定\s*/, '')
-      .replace(/^日延べ\s*/, '')
-      .trim();
-  };
-
-  const baseCleanTitle = getCleanBaseTitle(titleStr);
-
   const formatDateText = (dateStr?: string | null) => {
     if (!dateStr) return '';
     const parts = dateStr.split(/[-/]/);
@@ -299,25 +289,28 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
 
   const findLinkedEvents = () => {
-    if (!event.allEvents || !baseCleanTitle) return { newSchedules: [], oldSchedules: [] };
+    if (!event.allEvents) return { newSchedules: [], oldSchedules: [] };
 
     const newSchedules: string[] = [];
     const oldSchedules: string[] = [];
 
-    event.allEvents.forEach((e) => {
-      if (e.id === event.id) return;
-      const eTitle = e.title || '';
-      const eCleanTitle = getCleanBaseTitle(eTitle);
+    // 1. このイベントの「元となったイベント」を探す（自分が新日程の場合）
+    if (event.prev_event_id) {
+      const parentEvent = event.allEvents.find((e) => e.id === event.prev_event_id);
+      if (parentEvent) {
+        const dateText = formatDateText(parentEvent.date);
+        const timeText = parentEvent.start_time ? ` ${parentEvent.start_time}〜` : '';
+        oldSchedules.push(`${dateText}${timeText}`);
+      }
+    }
 
-      if (eCleanTitle === baseCleanTitle) {
+    // 2. このイベントを「元として新しく作られたイベント」を探す（自分が元日程の場合）
+    event.allEvents.forEach((e) => {
+      if (e.prev_event_id === event.id) {
         const dateText = formatDateText(e.date);
         const timeText = e.start_time ? ` ${e.start_time}〜` : '';
-        const formattedStr = `${dateText}${timeText}`;
-
-        if (eTitle.includes('日延べ') || (new Date(e.date || '') < new Date(event.date || ''))) {
-          if (!oldSchedules.includes(formattedStr)) oldSchedules.push(formattedStr);
-        } else {
-          if (!newSchedules.includes(formattedStr)) newSchedules.push(formattedStr);
+        if (!newSchedules.includes(`${dateText}${timeText}`)) {
+          newSchedules.push(`${dateText}${timeText}`);
         }
       }
     });
