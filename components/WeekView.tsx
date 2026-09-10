@@ -43,7 +43,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   // モーダル用state
   const [selectedDateForHoliday, setSelectedDateForHoliday] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string>('天野');
-  const members = ['天野', '佐々木', '山岡'];
+  const members = ['天野', '佐々木', '宇治'];
 
   // スワイプ検知用の座標保持用ref
   const touchStartX = useRef<number | null>(null);
