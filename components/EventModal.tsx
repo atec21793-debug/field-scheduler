@@ -49,6 +49,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [selectedColor, setSelectedColor] = useState(event.color || '#1e3a8a');
 
   const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
+  const [isKu, setIsKu] = useState((event.title || '').includes('🈳'));
   const [isOrdered, setIsOrdered] = useState(event.ordered || false);
 
   const [memo, setMemo] = useState(event.memo || '');
@@ -108,8 +109,15 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
     setIsSaving(true);
 
-    let cleanTitle = title.replace(/^★\s*/, '').trim();
-    const finalTitle = isStarred ? `★ ${cleanTitle}` : cleanTitle;
+    let cleanTitle = title
+      .replace(/^★\s*/, '')
+      .replace(/^🔁\s*/, '')
+      .replace(/^🈳\s*/, '')
+      .trim();
+
+    let finalTitle = cleanTitle;
+    if (isKu) finalTitle = `🈳${finalTitle}`;
+    if (isStarred) finalTitle = `★ ${finalTitle}`;
 
     const timeString = startTime && endTime ? `${startTime} - ${endTime}` : '';
     const { error } = await supabase
@@ -141,10 +149,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       .replace(/^🔁\s*/, '')
       .replace(/^日延未定\s*/, '')
       .replace(/^日延べ\s*/, '')
+      .replace(/^🈳\s*/, '')
       .trim();
 
     if (postponeType === 'undecided') {
       let newTitle = `日延未定 ${cleanTitle}`.trim();
+      if (isKu) newTitle = `🈳${newTitle}`;
       if (isStarred) newTitle = `★ ${newTitle}`;
 
       const { error } = await supabase
@@ -176,6 +186,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
       let newCardTitle = `🔁 ${cleanTitle}`.trim();
+      if (isKu) newCardTitle = `🈳${newCardTitle}`;
       if (isStarred) newCardTitle = `★ ${newCardTitle}`;
 
       const finalPostponeDate = sanitizeDateString(newPostponeDate);
@@ -204,6 +215,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       }
 
       let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
+      if (isKu) originalTitleWithPostpone = `🈳${originalTitleWithPostpone}`;
       if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
 
       const { error: updateError } = await supabase
@@ -379,18 +391,34 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 />
               </div>
 
-              <div className="flex items-center space-x-2 pt-1 pb-1 bg-white/60 px-2.5 py-1.5 rounded border border-blue-100">
-                <input
-                  id="orderedCheckbox"
-                  type="checkbox"
-                  checked={isOrdered}
-                  onChange={(e) => setIsOrdered(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-                />
-                <label htmlFor="orderedCheckbox" className="text-xs font-semibold text-indigo-900 cursor-pointer flex items-center space-x-1">
-                  <ShoppingCart size={14} className="text-indigo-600" />
-                  <span>商品発注済み・支給</span>
-                </label>
+              {/* 空室マークと商品発注済みの両方のチェックボックスを配置 */}
+              <div className="space-y-2 pt-1 pb-1">
+                <div className="flex items-center space-x-2 bg-white/60 px-2.5 py-1.5 rounded border border-blue-100">
+                  <input
+                    id="kuCheckbox"
+                    type="checkbox"
+                    checked={isKu}
+                    onChange={(e) => setIsKu(e.target.checked)}
+                    className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 cursor-pointer"
+                  />
+                  <label htmlFor="kuCheckbox" className="text-xs font-semibold text-amber-900 cursor-pointer flex items-center space-x-1">
+                    <span>🈳 空室マークを付ける</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 bg-white/60 px-2.5 py-1.5 rounded border border-blue-100">
+                  <input
+                    id="orderedCheckbox"
+                    type="checkbox"
+                    checked={isOrdered}
+                    onChange={(e) => setIsOrdered(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <label htmlFor="orderedCheckbox" className="text-xs font-semibold text-indigo-900 cursor-pointer flex items-center space-x-1">
+                    <ShoppingCart size={14} className="text-indigo-600" />
+                    <span>商品発注済み・支給</span>
+                  </label>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
