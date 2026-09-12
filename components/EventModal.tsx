@@ -391,7 +391,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
                 />
               </div>
 
-              {/* 空室マークと商品発注済みの両方のチェックボックスを配置 */}
               <div className="space-y-2 pt-1 pb-1">
                 <div className="flex items-center space-x-2 bg-white/60 px-2.5 py-1.5 rounded border border-blue-100">
                   <input
@@ -423,13 +422,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付 (YYYY-MM-DD)</label>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">日付</label>
                   <input
-                    type="text"
+                    type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    placeholder="2026-09-11"
-                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                    className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800 cursor-pointer"
                   />
                 </div>
                 <div>
@@ -601,13 +599,12 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
               {postponeType === 'date' && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付 (YYYY-MM-DD)</label>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">新しい日付</label>
                     <input
-                      type="text"
+                      type="date"
                       value={newPostponeDate}
                       onChange={(e) => setNewPostponeDate(e.target.value)}
-                      placeholder="2026-09-11"
-                      className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800"
+                      className="w-full text-xs p-2 border border-gray-300 rounded bg-white text-gray-800 cursor-pointer"
                       required
                     />
                   </div>
