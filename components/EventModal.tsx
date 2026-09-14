@@ -15,9 +15,11 @@ const COLOR_OPTIONS = [
   { label: 'グレー', value: '#4b5563' },
   { label: '赤', value: '#dc2626' },
   { label: '濃い青', value: '#1e3a8a' },
+  { label: '紫', value: '#7c3aed' },
   { label: '水色', value: '#38bdf8' },
   { label: '黄色', value: '#cab919' },
-  { label: '紫', value: '#7c3aed' },
+  { label: '紫', value: '#0e6d1b' },
+  
 ];
 
 const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
