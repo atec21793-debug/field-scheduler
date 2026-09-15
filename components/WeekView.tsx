@@ -40,6 +40,9 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const HOUR_HEIGHT = 40;
 
+  // 今日の日付インスタンス（判定用）
+  const today = new Date();
+
   // モーダル用state
   const [selectedDateForHoliday, setSelectedDateForHoliday] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<string>('天野');
@@ -221,15 +224,12 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
             const holidayEvents = dayEvents.filter(
               (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
             );
-            
-            const todayStr = new Intl.DateTimeFormat('ja-JP', {
-              timeZone: 'Asia/Tokyo',
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            }).format(new Date()).split('/').map(num => num.padStart(2, '0')).join('-');
 
-            const isToday = headerDateStr === todayStr;
+            // 年・月・日を直接数値で判定（今日のみに一致）
+            const isToday =
+              date.getFullYear() === today.getFullYear() &&
+              date.getMonth() === today.getMonth() &&
+              date.getDate() === today.getDate();
 
             return (
               <div 
