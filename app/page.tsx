@@ -25,7 +25,7 @@ export type EventItem = {
   memo?: string | null;
   report?: string | null;
   ordered?: boolean;
-  prev_event_id?: number | null; // 追加
+  prev_event_id?: number | null;
 };
 
 export default function Home() {
@@ -50,7 +50,9 @@ export default function Home() {
     let query = supabase.from('events').select('*');
 
     if (searchQuery.trim() !== '') {
-      query = query.ilike('title', `%${searchQuery.trim()}%`);
+      const q = searchQuery.trim();
+      // タイトル(title) または 住所(address) のいずれかに合致するものを検索
+      query = query.or(`title.ilike.%${q}%,address.ilike.%${q}%`);
     }
 
     const { data, error } = await query;
@@ -158,12 +160,17 @@ export default function Home() {
                   }}
                   className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 text-xs shadow-sm cursor-pointer hover:bg-blue-50 transition"
                 >
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-gray-700">{ev.date || '未定'}</span>
-                    {ev.start_time && (
-                      <span className="text-gray-500">{ev.start_time}〜</span>
+                  <div className="flex flex-col space-y-0.5">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-gray-700">{ev.date || '未定'}</span>
+                      {ev.start_time && (
+                        <span className="text-gray-500">{ev.start_time}〜</span>
+                      )}
+                      <span className="font-bold text-blue-600">{ev.title}</span>
+                    </div>
+                    {ev.address && (
+                      <span className="text-[10px] text-gray-500 pl-0.5">📍 {ev.address}</span>
                     )}
-                    <span className="font-bold text-blue-600">{ev.title}</span>
                   </div>
                   {ev.ordered && (
                     <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-medium">
