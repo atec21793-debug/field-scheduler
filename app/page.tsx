@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import CalendarHeader from '@/components/CalendarHeader';
 import MonthView from '@/components/MonthView';
@@ -36,6 +36,9 @@ export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // 選択中の検索結果月タブ（例: '2026-08' や '未定'）
+  const [selectedSearchMonth, setSelectedSearchMonth] = useState<string>('ALL');
+
   // サイドバーの開閉状態（デフォルトは非表示: false）
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -59,7 +62,7 @@ export default function Home() {
     if (error) {
       console.error('Error fetching events:', error);
     } else if (data) {
-      // 日付順・時間順（昇順）にソート（未定の日付は末尾）
+      // 日付順・時間順（昇順）にソート
       const sortedData = [...data].sort((a, b) => {
         if (!a.date && !b.date) return 0;
         if (!a.date) return 1;
@@ -80,6 +83,51 @@ export default function Home() {
   useEffect(() => {
     fetchEvents();
   }, [searchQuery]);
+
+  // 検索結果を月別にグループ分け
+  const searchResultGroups = useMemo(() => {
+    if (searchQuery.trim() === '') return {};
+
+    const groups: { [key: string]: EventItem[] } = {};
+
+    events.forEach((ev) => {
+      let monthKey = '未定';
+      if (ev.date) {
+        // YYYY-MM 形式の文字列を取得 (例: "2026-08")
+        monthKey = ev.date.substring(0, 7);
+      }
+      if (!groups[monthKey]) {
+        groups[monthKey] = [];
+      }
+      groups[monthKey].push(ev);
+    });
+
+    return groups;
+  }, [events, searchQuery]);
+
+  // 存在する月のキー一覧を取得（昇順）
+  const monthKeys = useMemo(() => {
+    const keys = Object.keys(searchResultGroups).sort();
+    // '未定' が含まれている場合は一番最後に移動
+    if (keys.includes('未定')) {
+      return keys.filter((k) => k !== '未定').concat('未定');
+    }
+    return keys;
+  }, [searchResultGroups]);
+
+  // 検索キーワードが変わったときに、選択タブをリセットする処理
+  useEffect(() => {
+    if (monthKeys.length > 0) {
+      // 最初は「すべて」または最初の月を選択
+      setSelectedSearchMonth('ALL');
+    }
+  }, [searchQuery, monthKeys.length]);
+
+  // 現在表示対象のイベントリスト
+  const filteredSearchEvents = useMemo(() => {
+    if (selectedSearchMonth === 'ALL') return events;
+    return searchResultGroups[selectedSearchMonth] || [];
+  }, [events, searchResultGroups, selectedSearchMonth]);
 
   const handleNavigate = (direction: 'prev' | 'today' | 'next') => {
     const newDate = new Date(currentDate);
@@ -155,17 +203,54 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 検索キーワード入力時のみ一覧を表示するエリア */}
+      {/* 検索キーワード入力時のみ一覧を月別タブ付きで表示するエリア */}
       {searchQuery.trim() !== '' && (
-        <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 max-h-48 overflow-y-auto">
-          <div className="text-xs font-bold text-gray-500 mb-2">
-            検索結果: {events.length}件の予定
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 max-h-56 overflow-y-auto">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-bold text-gray-500">
+              検索結果: {events.length}件の予定
+            </div>
+            {/* 月別タブ切り替えUI */}
+            {monthKeys.length > 0 && (
+              <div className="flex space-x-1 overflow-x-auto pb-1 max-w-full">
+                <button
+                  onClick={() => setSelectedSearchMonth('ALL')}
+                  className={`px-2 py-0.5 text-[11px] font-semibold rounded-full border transition whitespace-nowrap ${
+                    selectedSearchMonth === 'ALL'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  すべて ({events.length})
+                </button>
+                {monthKeys.map((key) => {
+                  const count = searchResultGroups[key].length;
+                  // "2026-08" -> "26年8月" や "8月" などの表示整形
+                  const label = key === '未定' ? '未定' : `${key.split('-')[1]}月`;
+
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedSearchMonth(key)}
+                      className={`px-2 py-0.5 text-[11px] font-semibold rounded-full border transition whitespace-nowrap ${
+                        selectedSearchMonth === key
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
+                      }`}
+                    >
+                      {label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          {events.length === 0 ? (
-            <div className="text-xs text-gray-400">一致する予定はありません</div>
+
+          {filteredSearchEvents.length === 0 ? (
+            <div className="text-xs text-gray-400 py-2">一致する予定はありません</div>
           ) : (
             <div className="space-y-1.5">
-              {events.map((ev) => (
+              {filteredSearchEvents.map((ev) => (
                 <div
                   key={ev.id}
                   onClick={() => {
