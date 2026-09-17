@@ -59,7 +59,21 @@ export default function Home() {
     if (error) {
       console.error('Error fetching events:', error);
     } else if (data) {
-      setEvents(data);
+      // 日付順・時間順（昇順）にソート（未定の日付は末尾）
+      const sortedData = [...data].sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+
+        const dateDiff = a.date.localeCompare(b.date);
+        if (dateDiff !== 0) return dateDiff;
+
+        const timeA = a.start_time || a.time || '';
+        const timeB = b.start_time || b.time || '';
+        return timeA.localeCompare(timeB);
+      });
+
+      setEvents(sortedData);
     }
   };
 
