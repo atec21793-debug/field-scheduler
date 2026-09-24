@@ -96,7 +96,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     return h * 60 + m;
   };
 
-  // カレンダー上で予定を移動させた際の処理（完全に移動させる）
+  // カレンダー上で予定を移動させた際の処理
   const handleDrop = async (e: React.DragEvent, targetDateStr: string, targetHour: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -133,35 +133,79 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const newEndTime = `${newEndH.toString().padStart(2, '0')}:${newEndM.toString().padStart(2, '0')}`;
     const newTimeString = `${newStartTime} - ${newEndTime}`;
 
-    // 「日延未定」が含まれていた場合、それを削除して先頭に「🔁」を付与する
-    let updatedTitle = targetEvent.title || '';
-    if (updatedTitle.includes('日延未定')) {
-      updatedTitle = updatedTitle
+    // 「日延未定」からのドラッグ判定
+    const isFromPostponed = (targetEvent.title || '').includes('日延未定') || targetEvent.status === 'postponed';
+
+    if (isFromPostponed) {
+      // ドロップ先用の新タイトル作成（「日延未定」を除去して「🔁」を付与）
+      let newTitle = targetEvent.title || '';
+      newTitle = newTitle
         .replace(/日延未定/g, '')
         .replace(/\s+/g, ' ')
         .trim();
 
-      if (!updatedTitle.startsWith('🔁')) {
-        updatedTitle = `🔁${updatedTitle}`;
+      if (!newTitle.startsWith('🔁')) {
+        newTitle = `🔁${newTitle}`;
       }
-    }
 
-    // 複製（INSERT）ではなく、既存レコードを新しい日時・タイトルに直接更新（UPDATE）する
-    const { error: updateError } = await supabase
-      .from('events')
-      .update({
-        title: updatedTitle,
-        date: targetDateStr,
-        start_time: newStartTime,
-        end_time: newEndTime,
-        time: newTimeString,
-        status: 'active', // 移動時はステータスをアクティブに戻す
-      })
-      .eq('id', eventId);
+      // 【1】元のイベントIDのカードを処理
+      if (targetEvent.date) {
+        // 元々カレンダー上に存在していたカードはステータスを completed にして完了（薄表示）扱いで残す
+        await supabase
+          .from('events')
+          .update({
+            status: 'completed',
+            title: targetEvent.title.replace(/日延未定/g, '日延べ'),
+          })
+          .eq('id', eventId);
+      } else {
+        // カレンダー日付が元々入っていないサイドバー専用カードの場合は元レコードを消去
+        await supabase
+          .from('events')
+          .delete()
+          .eq('id', eventId);
+      }
 
-    if (updateError) {
-      console.error('Failed to update event:', updateError);
-      return;
+      // 【2】ドロップ先の日時に新しいアクティブ予定として新規作成 (INSERT)
+      const { error: insertError } = await supabase
+        .from('events')
+        .insert([
+          {
+            title: newTitle,
+            date: targetDateStr,
+            start_time: newStartTime,
+            end_time: newEndTime,
+            time: newTimeString,
+            status: 'active',
+            address: targetEvent.address,
+            color: targetEvent.color,
+            memo: targetEvent.memo,
+            report: targetEvent.report,
+            ordered: targetEvent.ordered,
+            prev_event_id: targetEvent.id,
+          },
+        ]);
+
+      if (insertError) {
+        console.error('Failed to insert new event:', insertError);
+        return;
+      }
+    } else {
+      // 通常のカレンダー内移動（単なる日時変更 UPDATE）
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({
+          date: targetDateStr,
+          start_time: newStartTime,
+          end_time: newEndTime,
+          time: newTimeString,
+        })
+        .eq('id', eventId);
+
+      if (updateError) {
+        console.error('Failed to update event:', updateError);
+        return;
+      }
     }
 
     if (onUpdate) {
@@ -401,6 +445,8 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                       key={event.id}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         const targetHour = Math.floor(startMin / 60);
                         handleDrop(e, dateStr, targetHour);
                       }}
