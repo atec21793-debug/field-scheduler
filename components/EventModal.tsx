@@ -93,12 +93,20 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // キャンセル状態のトグル処理
+  // キャンセル状態のトグル処理（キャンセル時は色を #4b5563 に更新）
   const handleToggleCancel = async () => {
-    const newStatus = event.status === 'cancelled' ? 'active' : 'cancelled';
+    const isCurrentlyCancelled = event.status === 'cancelled';
+    const newStatus = isCurrentlyCancelled ? 'active' : 'cancelled';
+    
+    // キャンセル設定時はグレー(#4b5563)をセット
+    const updateData: { status: string; color?: string } = { status: newStatus };
+    if (!isCurrentlyCancelled) {
+      updateData.color = '#4b5563';
+    }
+
     const { error } = await supabase
       .from('events')
-      .update({ status: newStatus })
+      .update(updateData)
       .eq('id', event.id);
 
     if (!error) {
@@ -352,7 +360,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      {/* モーダル本体（ opacity-50 は付与せず通常のまま ） */}
       <div 
         className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}

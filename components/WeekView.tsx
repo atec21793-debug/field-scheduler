@@ -455,7 +455,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                       }}
                       className={`overflow-hidden box-border transition-opacity ${
                         shouldDim ? 'opacity-50' : 'opacity-100'
-                      } ${isCancelled ? 'line-through decoration-red-500 decoration-2' : ''}`}
+                      } ${isCancelled ? 'line-through decoration-black decoration-2' : ''}`}
                     >
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
                     </div>
