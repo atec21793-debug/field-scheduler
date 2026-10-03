@@ -137,7 +137,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     const isFromPostponed = (targetEvent.title || '').includes('日延未定') || targetEvent.status === 'postponed';
 
     if (isFromPostponed) {
-      // ドロップ先用の新タイトル作成（「日延未定」を除去して「🔁」を付与）
       let newTitle = targetEvent.title || '';
       newTitle = newTitle
         .replace(/日延未定/g, '')
@@ -148,9 +147,7 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         newTitle = `🔁${newTitle}`;
       }
 
-      // 【1】元のイベントIDのカードを処理
       if (targetEvent.date) {
-        // 元々カレンダー上に存在していたカードはステータスを completed にして完了（薄表示）扱いで残す
         await supabase
           .from('events')
           .update({
@@ -159,14 +156,12 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
           })
           .eq('id', eventId);
       } else {
-        // カレンダー日付が元々入っていないサイドバー専用カードの場合は元レコードを消去
         await supabase
           .from('events')
           .delete()
           .eq('id', eventId);
       }
 
-      // 【2】ドロップ先の日時に新しいアクティブ予定として新規作成 (INSERT)
       const { error: insertError } = await supabase
         .from('events')
         .insert([
@@ -191,7 +186,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
         return;
       }
     } else {
-      // 通常のカレンダー内移動（単なる日時変更 UPDATE）
       const { error: updateError } = await supabase
         .from('events')
         .update({
@@ -215,7 +209,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
     }
   };
 
-  // ヘッダーのセルをクリックしたとき
   const handleHeaderClick = (dateStr: string) => {
     setSelectedDateForHoliday(dateStr);
     setSelectedMember('天野');
@@ -269,7 +262,6 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
               (ev) => (ev.title && ev.title.includes('🎌')) || ev.color === '#388ddd'
             );
 
-            // 年・月・日を直接数値で判定（今日のみに一致）
             const isToday =
               date.getFullYear() === today.getFullYear() &&
               date.getMonth() === today.getMonth() &&
@@ -434,11 +426,13 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                   const leftPercent = colIndex * widthPercent;
 
                   const isCompleted = event.status === 'completed' || (event as any).completed;
+                  const isCancelled = event.status === 'cancelled';
                   const title = event.title || '';
                   const isUndecided = title.includes('日延未定');
                   const isPostponed = title.includes('日延べ') && !isUndecided;
                   
-                  const shouldDim = isPostponed || (isCompleted && !isUndecided) || (isUndecided && isCompleted);
+                  // キャンセル、完了、日延べの場合に半透明化
+                  const shouldDim = isCancelled || isPostponed || (isCompleted && !isUndecided) || (isUndecided && isCompleted);
 
                   return (
                     <div
@@ -459,7 +453,9 @@ export default function WeekView({ currentDate, events, onSelectEvent, onCellCli
                         padding: '1px',
                         zIndex: 10 + colIndex,
                       }}
-                      className={`overflow-hidden box-border transition-opacity ${shouldDim ? 'opacity-50' : 'opacity-100'}`}
+                      className={`overflow-hidden box-border transition-opacity ${
+                        shouldDim ? 'opacity-50' : 'opacity-100'
+                      } ${isCancelled ? 'line-through decoration-black decoration-2' : ''}`}
                     >
                       <EventCard event={event} onClick={() => onSelectEvent(event)} />
                     </div>
