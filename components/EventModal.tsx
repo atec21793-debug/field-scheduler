@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { EventItem } from '@/app/page';
 import { supabase } from '@/lib/supabase';
-import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { X, MapPin, Calendar, Check, Trash2, Clock, Edit3, ArrowRight, ArrowLeft, ShoppingCart, Ban } from 'lucide-react';
 
 interface EventModalProps {
   event: EventItem & { ordered?: boolean; image_url?: string; allEvents?: EventItem[]; prev_event_id?: number | null };
@@ -19,7 +19,6 @@ const COLOR_OPTIONS = [
   { label: '水色', value: '#38bdf8' },
   { label: '黄色', value: '#cab919' },
   { label: '紫', value: '#0e6d1b' },
-  
 ];
 
 const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
@@ -83,6 +82,20 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const handleToggleComplete = async () => {
     const newStatus = event.status === 'completed' ? 'active' : 'completed';
+    const { error } = await supabase
+      .from('events')
+      .update({ status: newStatus })
+      .eq('id', event.id);
+
+    if (!error) {
+      onUpdate();
+      onClose();
+    }
+  };
+
+  // キャンセル状態のトグル処理
+  const handleToggleCancel = async () => {
+    const newStatus = event.status === 'cancelled' ? 'active' : 'cancelled';
     const { error } = await supabase
       .from('events')
       .update({ status: newStatus })
@@ -290,6 +303,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   const titleStr = event.title || '';
   const isPostponedUndecided = titleStr.includes('日延未定') || (titleStr.includes('日延べ') && !titleStr.includes('🔁'));
+  const isCancelled = event.status === 'cancelled';
 
   const formatDateText = (dateStr?: string | null) => {
     if (!dateStr) return '';
@@ -339,7 +353,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
-        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" 
+        className={`bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] transition-opacity duration-200 ${
+          isCancelled ? 'opacity-50' : 'opacity-100'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
@@ -356,6 +372,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
             <h2 className="text-lg font-bold text-gray-800 truncate">
               {isEditing ? '予定の編集' : displayTitle}
+              {isCancelled && <span className="ml-2 text-xs font-normal text-red-600">（キャンセル済）</span>}
             </h2>
           </div>
 
@@ -537,39 +554,55 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
           )}
 
           <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+            {/* 完了ボタン */}
             <button
               onClick={handleToggleComplete}
-              className={`flex-1 min-w-[110px] flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-xs font-semibold text-white transition ${
+              className={`flex-1 min-w-[90px] flex items-center justify-center space-x-1 py-2 px-2.5 rounded-lg text-xs font-semibold text-white transition ${
                 event.status === 'completed' ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-600 hover:bg-green-700'
               }`}
             >
-              <Check size={16} />
-              <span>{event.status === 'completed' ? '完了済み' : '完了にする'}</span>
+              <Check size={15} />
+              <span>{event.status === 'completed' ? '完了済み' : '完了'}</span>
             </button>
 
+            {/* キャンセルボタン */}
+            <button
+              onClick={handleToggleCancel}
+              className={`flex-1 min-w-[90px] flex items-center justify-center space-x-1 py-2 px-2.5 rounded-lg text-xs font-semibold text-white transition ${
+                isCancelled
+                  ? 'bg-gray-600 hover:bg-gray-700'
+                  : 'bg-red-500 hover:bg-red-600'
+              }`}
+            >
+              <Ban size={15} />
+              <span>{isCancelled ? 'キャンセル解除' : 'キャンセル'}</span>
+            </button>
+
+            {/* 日延べボタン */}
             {isPostponedUndecided ? (
               <button
                 onClick={handleRemovePostpone}
-                className="flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-xs font-semibold border bg-amber-500 border-amber-500 text-white hover:bg-amber-600 transition"
+                className="flex-1 min-w-[90px] flex items-center justify-center space-x-1 py-2 px-2.5 rounded-lg text-xs font-semibold border bg-amber-500 border-amber-500 text-white hover:bg-amber-600 transition"
               >
-                <Clock size={16} />
+                <Clock size={15} />
                 <span>日延べ解除</span>
               </button>
             ) : (
               <button
                 onClick={() => setShowPostponeForm(!showPostponeForm)}
-                className="flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-xs font-semibold border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition"
+                className="flex-1 min-w-[90px] flex items-center justify-center space-x-1 py-2 px-2.5 rounded-lg text-xs font-semibold border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition"
               >
-                <Clock size={16} />
+                <Clock size={15} />
                 <span>日延べ</span>
               </button>
             )}
 
+            {/* 削除ボタン */}
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition"
+              className="flex items-center justify-center space-x-1 py-2 px-2.5 rounded-lg text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} />
               <span>削除</span>
             </button>
           </div>
