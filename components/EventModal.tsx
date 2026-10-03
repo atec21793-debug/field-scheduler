@@ -378,7 +378,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
             <h2 className="text-lg font-bold text-gray-800 truncate">
               {isEditing ? '予定の編集' : displayTitle}
-              {isCancelled && <span className="ml-2 text-xs font-normal text-red-600">（キャンセル済）</span>}
+              
             </h2>
           </div>
 
