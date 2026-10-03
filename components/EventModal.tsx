@@ -18,7 +18,7 @@ const COLOR_OPTIONS = [
   { label: '紫', value: '#7c3aed' },
   { label: '水色', value: '#38bdf8' },
   { label: '黄色', value: '#cab919' },
-  { label: '紫', value: '#0e6d1b' },
+  { label: '緑', value: '#0e6d1b' },
 ];
 
 const KW_OPTIONS = ['2.2kw', '2.5kw', '2.8kw', '3.6kw', '4.0kw', '5.6kw', '6.3kw', '7.1kw', '9.0kw'];
@@ -352,10 +352,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      {/* モーダル本体（ opacity-50 は付与せず通常のまま ） */}
       <div 
-        className={`bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] transition-opacity duration-200 ${
-          isCancelled ? 'opacity-50' : 'opacity-100'
-        }`}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
