@@ -51,6 +51,14 @@ const getCleanTitle = (title: string = '') => {
     .trim();
 };
 
+// タイトルから「日延べ系」のプレフィックス（🔁, 日延未定, 日延べ）のみを抽出するヘルパー関数
+const getPostponePrefix = (title: string = '') => {
+  if (title.includes('🔁')) return '🔁';
+  if (title.includes('日延未定')) return '日延未定';
+  if (title.includes('日延べ')) return '日延べ';
+  return '';
+};
+
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(getCleanTitle(event.title || ''));
@@ -86,7 +94,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     const checked = e.target.checked;
     setIsStarred(checked);
 
-    const newTitle = buildTitle(event.title || '', checked, isKu);
+    const existingPrefix = getPostponePrefix(event.title || '');
+    const newTitle = buildTitle(event.title || '', checked, isKu, existingPrefix);
 
     const { error } = await supabase
       .from('events')
@@ -149,7 +158,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
     setIsSaving(true);
 
-    const finalTitle = buildTitle(title, isStarred, isKu);
+    // 保存時に既存の🔁などの記号を判定して保持する
+    const existingPrefix = getPostponePrefix(event.title || '');
+    const finalTitle = buildTitle(title, isStarred, isKu, existingPrefix);
     const timeString = startTime && endTime ? `${startTime} - ${endTime}` : '';
 
     const { error } = await supabase
