@@ -40,16 +40,27 @@ const sanitizeDateString = (dateStr?: string | null) => {
   return dateStr;
 };
 
+// プレフィックスを取り除いたプレーンなタイトルを取得するヘルパー関数
+const getCleanTitle = (title: string = '') => {
+  return title
+    .replace(/^★\s*/, '')
+    .replace(/^🔁\s*/, '')
+    .replace(/^日延未定\s*/, '')
+    .replace(/^日延べ\s*/, '')
+    .replace(/^🈳\s*/, '')
+    .trim();
+};
+
 export default function EventModal({ event, onClose, onUpdate }: EventModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(event.title || '');
+  const [title, setTitle] = useState(getCleanTitle(event.title || ''));
   const [date, setDate] = useState(sanitizeDateString(event.date) || '');
   const [startTime, setStartTime] = useState(event.start_time || '');
   const [endTime, setEndTime] = useState(event.end_time || '');
   const [address, setAddress] = useState(event.address || '');
   const [selectedColor, setSelectedColor] = useState(event.color || '#1e3a8a');
 
-  const [isStarred, setIsStarred] = useState((event.title || '').startsWith('★'));
+  const [isStarred, setIsStarred] = useState((event.title || '').includes('★'));
   const [isKu, setIsKu] = useState((event.title || '').includes('🈳'));
   const [isOrdered, setIsOrdered] = useState(event.ordered || false);
 
@@ -62,12 +73,20 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const [newPostponeDate, setNewPostponeDate] = useState(sanitizeDateString(event.date) || '');
   const [newPostponeTime, setNewPostponeTime] = useState(event.start_time || '09:00');
 
+  // タイトルプレフィックスの組み立て関数
+  const buildTitle = (baseTitle: string, starred: boolean, ku: boolean, prefix = '') => {
+    let result = getCleanTitle(baseTitle);
+    if (prefix) result = `${prefix} ${result}`.trim();
+    if (ku) result = `🈳${result}`;
+    if (starred) result = `★ ${result}`;
+    return result;
+  };
+
   const handleStarToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     setIsStarred(checked);
 
-    let cleanTitle = (event.title || '').replace(/^★\s*/, '').trim();
-    const newTitle = checked ? `★ ${cleanTitle}` : cleanTitle;
+    const newTitle = buildTitle(event.title || '', checked, isKu);
 
     const { error } = await supabase
       .from('events')
@@ -93,12 +112,10 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     }
   };
 
-  // キャンセル状態のトグル処理（キャンセル時は色を #4b5563 に更新）
   const handleToggleCancel = async () => {
     const isCurrentlyCancelled = event.status === 'cancelled';
     const newStatus = isCurrentlyCancelled ? 'active' : 'cancelled';
-    
-    // キャンセル設定時はグレー(#4b5563)をセット
+
     const updateData: { status: string; color?: string } = { status: newStatus };
     if (!isCurrentlyCancelled) {
       updateData.color = '#4b5563';
@@ -132,17 +149,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     e.preventDefault();
     setIsSaving(true);
 
-    let cleanTitle = title
-      .replace(/^★\s*/, '')
-      .replace(/^🔁\s*/, '')
-      .replace(/^🈳\s*/, '')
-      .trim();
-
-    let finalTitle = cleanTitle;
-    if (isKu) finalTitle = `🈳${finalTitle}`;
-    if (isStarred) finalTitle = `★ ${finalTitle}`;
-
+    const finalTitle = buildTitle(title, isStarred, isKu);
     const timeString = startTime && endTime ? `${startTime} - ${endTime}` : '';
+
     const { error } = await supabase
       .from('events')
       .update({
@@ -159,6 +168,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
     setIsSaving(false);
     if (!error) {
+      event.title = finalTitle;
       setIsEditing(false);
       onUpdate();
     }
@@ -167,18 +177,8 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const handleConfirmPostpone = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let cleanTitle = (event.title || '')
-      .replace(/^★\s*/, '')
-      .replace(/^🔁\s*/, '')
-      .replace(/^日延未定\s*/, '')
-      .replace(/^日延べ\s*/, '')
-      .replace(/^🈳\s*/, '')
-      .trim();
-
     if (postponeType === 'undecided') {
-      let newTitle = `日延未定 ${cleanTitle}`.trim();
-      if (isKu) newTitle = `🈳${newTitle}`;
-      if (isStarred) newTitle = `★ ${newTitle}`;
+      const newTitle = buildTitle(event.title || '', isStarred, isKu, '日延未定');
 
       const { error } = await supabase
         .from('events')
@@ -208,10 +208,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
       const newEndTimeStr = minutesToTime(newEndMin);
       const newTimeString = `${newStartTimeStr} - ${newEndTimeStr}`;
 
-      let newCardTitle = `🔁 ${cleanTitle}`.trim();
-      if (isKu) newCardTitle = `🈳${newCardTitle}`;
-      if (isStarred) newCardTitle = `★ ${newCardTitle}`;
-
+      const newCardTitle = buildTitle(event.title || '', isStarred, isKu, '🔁');
       const finalPostponeDate = sanitizeDateString(newPostponeDate);
 
       const { error: insertError } = await supabase.from('events').insert([
@@ -237,15 +234,13 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
         return;
       }
 
-      let originalTitleWithPostpone = `日延べ ${cleanTitle}`.trim();
-      if (isKu) originalTitleWithPostpone = `🈳${originalTitleWithPostpone}`;
-      if (isStarred) originalTitleWithPostpone = `★ ${originalTitleWithPostpone}`;
+      const originalTitleWithPostpone = buildTitle(event.title || '', isStarred, isKu, '日延べ');
 
       const { error: updateError } = await supabase
         .from('events')
-        .update({ 
+        .update({
           title: originalTitleWithPostpone,
-          status: 'completed'
+          status: 'completed',
         })
         .eq('id', event.id);
 
@@ -260,14 +255,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   };
 
   const handleRemovePostpone = async () => {
-    let cleanTitle = (event.title || '')
-      .replace(/^★\s*/, '')
-      .replace(/^🔁\s*/, '')
-      .replace(/^日延未定\s*/, '')
-      .replace(/^日延べ\s*/, '')
-      .trim();
-
-    if (isStarred) cleanTitle = `★ ${cleanTitle}`;
+    const cleanTitle = buildTitle(event.title || '', isStarred, isKu);
 
     const { error } = await supabase
       .from('events')
@@ -301,7 +289,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const handleSelectKw = async (kw: string) => {
     const updatedMemo = memo ? `${memo} ${kw}` : kw;
     setMemo(updatedMemo);
-    
+
     await supabase
       .from('events')
       .update({ memo: updatedMemo, report })
@@ -354,9 +342,7 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
   const linkedNewText = newSchedules.join(', ');
   const linkedOldText = oldSchedules.join(', ');
 
-  const displayTitle = titleStr
-    .replace(/^★\s*/, '')
-    .replace(/^🔁\s*/, '');
+  const displayTitle = getCleanTitle(titleStr);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -378,7 +364,6 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
 
             <h2 className="text-lg font-bold text-gray-800 truncate">
               {isEditing ? '予定の編集' : displayTitle}
-              
             </h2>
           </div>
 
