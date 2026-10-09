@@ -125,14 +125,9 @@ export default function EventModal({ event, onClose, onUpdate }: EventModalProps
     const isCurrentlyCancelled = event.status === 'cancelled';
     const newStatus = isCurrentlyCancelled ? 'active' : 'cancelled';
 
-    const updateData: { status: string; color?: string } = { status: newStatus };
-    if (!isCurrentlyCancelled) {
-      updateData.color = '#4b5563';
-    }
-
     const { error } = await supabase
       .from('events')
-      .update(updateData)
+      .update({ status: newStatus })
       .eq('id', event.id);
 
     if (!error) {
